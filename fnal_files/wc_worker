@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# This script implements several commands to forward a job to a remote
+# starter via a shared filesystem
+
+function do_submit ()
+{
+  echo do_submit
+  tar zcf ${JOB_NAME}.tar.gz * .??*
+  mv ${JOB_NAME}.tar.gz $REMOTE_DIR
+}
+
+function do_wait ()
+{
+  echo do_wait
+  while [[ -f ${REMOTE_DIR}/${JOB_NAME}.tar.gz && ! -f ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz ]] ; do
+    sleep 5
+  done
+}
+
+function do_stageout ()
+{
+  echo do_stageout
+  tar xf ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz
+}
+
+function do_remove()
+{
+  echo do_remove
+  rm ${REMOTE_DIR}/${JOB_NAME}.tar.gz
+  rm ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz
+}
+
+if [ $# -lt 3 ] ; then
+  echo "Missing args"
+  exit 1
+fi
+
+REMOTE_DIR=$2
+JOB_NAME=$3
+
+case $1 in
+  submit)
+    do_submit
+    ;;
+  wait)
+    do_wait
+    ;;
+  stageout)
+    do_stageout
+    ;;
+  remove)
+    do_remove
+    ;;
+  submit_wait_stageout)
+    do_submit
+    do_wait
+    do_stageout
+    #do_remove
+    ;;
+  *)
+    echo "Unknown command"
+    exit 1
+    ;;
+esac
+
+exit 0
+

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# This job wrapper script diverts the job to a remote gridshell starter
+# via a shared filesystem.
+
+# For now, just exec the job
+export JEF_WRAPPER=Yes
+#exec "$@"
+
+echo JEF Wrapper starting >>wrapper.out
+
+REMOTE_DIR=`condor_config_val STARTER_REMOTE_DIR`
+
+JOB_NAME=`basename $_CONDOR_SCRATCH_DIR`
+tar zcf ${JOB_NAME}.tar.gz * .??* >>wrapper.out 2>&1
+mv ${JOB_NAME}.tar.gz $REMOTE_DIR >>wrapper.out 2>&1
+
+while [ ! -f ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz ] ; do
+    sleep 5
+done
+
+tar xf ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz >>wrapper.out 2>&1
+rm ${REMOTE_DIR}/${JOB_NAME}.tar.gz >>wrapper.out 2>&1
+
+echo JEF Done >>wrapper.out
+
+exit 0

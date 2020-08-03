@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Launch a glidein on a set of WC nodes
+
+if [ "$2" = "" ] ; then
+    echo "Usage: $0 <WC user> <node cnt> [<WC base directory>]" 1>&2
+    exit 1
+fi
+
+WC_USER="$1"
+NODE_CNT="$2"
+#WC_BASE_DIR="$3"
+#if [ "$WC_BASE_DIR" = "" ] ; then
+WC_BASE_DIR="$3"/glidein_`whoami`_$$
+#fi
+GLIDEIN_NAME=`whoami`
+SOURCE=/cloud/login/macosta/fnal_hpc
+FNAL_BASE_DIR=`pwd`
+
+echo Using directory $WC_BASE_DIR at WC
+
+# Set up the local Condor installation
+echo JEF writing fnal files
+cp -dR ${SOURCE}/skeleton/* .
+chmod 400 pool_password
+echo LOCAL_DIR=${FNAL_BASE_DIR} >>condor_config
+cat >config.d/97-personal2.conf <<EOF
+# Run-time settings for this personal condor setup
+#new startd name
+NUM_SLOTS_TYPE_1 = $NODE_CNT
+MASTER_NAME = $GLIDEIN_NAME
+STARTD_NAME = $GLIDEIN_NAME
+EOF
+
+read -n 1 -s -r -p "Press any key to continue"
+
+# create sshfs connection
+ssh ${WC_USER}@wc.fnal.gov mkdir ${WC_BASE_DIR}
+sshfs -o allow_other ${WC_USER}@wc.fnal.gov:${WC_BASE_DIR} ./wc_gpfs
+
+read -n 1 -s -r -p "Press any key to continue"
+
+# write wc files
+echo JEF writing wc files
+mkdir wc_gpfs/rendezvous wc_gpfs/log wc_gpfs/execute
+cp -a ${SOURCE}/wc_files/* wc_gpfs/
+cat >wc_gpfs/job.slurm <<EOF
+#!/bin/bash
+
+#SBATCH --nodes=2
+#SBATCH --qos=normal
+#SBATCH --time=00:45:00
+#SBATCH --partition=wc1cpu
+#SBATCH --error=job-%j.err
+#SBATCH --output=job-%j.out
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+
+srun ./node.sh
+EOF
+
+chmod a+rx wc_gpfs/job.slurm
+
+read -n 1 -s -r -p "Press any key to continue"
+
+# submit slurm job
+echo JEF submitted slurm job
+ssh ${WC_USER}@wc.fnal.gov /bin/bash -l -c "'cd ${WC_BASE_DIR}; sbatch job.slurm'"
+echo JEF ssh return $?
+
+read -n 1 -s -r -p "Press any key to continue"
+
+# launch master
+echo JEF starting condor
+export CONDOR_CONFIG=${FNAL_BASE_DIR}/condor_config
+/usr/sbin/condor_master
