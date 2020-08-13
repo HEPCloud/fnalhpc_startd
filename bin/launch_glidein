@@ -9,18 +9,18 @@ fi
 
 WC_USER="$1"
 NODE_CNT="$2"
-#WC_BASE_DIR="$3"
-#if [ "$WC_BASE_DIR" = "" ] ; then
+WC_BASE_DIR="$3"
+if [ "$WC_BASE_DIR" = "" ] ; then
 WC_BASE_DIR="$3"/glidein_`whoami`_$$
-#fi
+fi
 GLIDEIN_NAME=`whoami`
-SOURCE=/cloud/login/macosta/fnal_hpc
+SOURCE=/cloud/login/macosta/fnalhpc_startd
 FNAL_BASE_DIR=`pwd`
 
-echo Using directory $WC_BASE_DIR at WC
+echo Using directory $WC_BASE_DIR at WC \n
 
 # Set up the local Condor installation
-echo JEF writing fnal files
+echo Writing local files \n
 cp -dR ${SOURCE}/skeleton/* .
 chmod 400 pool_password
 echo LOCAL_DIR=${FNAL_BASE_DIR} >>condor_config
@@ -32,24 +32,25 @@ MASTER_NAME = $GLIDEIN_NAME
 STARTD_NAME = $GLIDEIN_NAME
 EOF
 
-read -n 1 -s -r -p "Press any key to continue"
+read -n 1 -s -r -p "Done, Press any key to continue \n"
 
 # create sshfs connection
+echo Creating sshfs connection \n
 ssh ${WC_USER}@wc.fnal.gov mkdir ${WC_BASE_DIR}
 sshfs -o allow_other ${WC_USER}@wc.fnal.gov:${WC_BASE_DIR} ./wc_gpfs
 
-read -n 1 -s -r -p "Press any key to continue"
+read -n 1 -s -r -p "Done, Press any key to continue\n"
 
 # write wc files
-echo JEF writing wc files
+echo Writing WC files \n
 mkdir wc_gpfs/rendezvous wc_gpfs/log wc_gpfs/execute
 cp -a ${SOURCE}/wc_files/* wc_gpfs/
 cat >wc_gpfs/job.slurm <<EOF
 #!/bin/bash
 
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --qos=normal
-#SBATCH --time=00:45:00
+#SBATCH --time=01:45:00
 #SBATCH --partition=wc1cpu
 #SBATCH --error=job-%j.err
 #SBATCH --output=job-%j.out
@@ -61,16 +62,18 @@ EOF
 
 chmod a+rx wc_gpfs/job.slurm
 
-read -n 1 -s -r -p "Press any key to continue"
+echo Files written, blahp job already at login node ready to be submitted \n
+
+read -n 1 -s -r -p "Press any key to continue\n"
 
 # submit slurm job
-echo JEF submitted slurm job
+echo Submitted slurm job \n
 ssh ${WC_USER}@wc.fnal.gov /bin/bash -l -c "'cd ${WC_BASE_DIR}; sbatch job.slurm'"
-echo JEF ssh return $?
+echo ssh return $? \n
 
-read -n 1 -s -r -p "Press any key to continue"
+read -n 1 -s -r -p "Done, now staring condor here -> ${HOSTNAME} .. continue? \n"
 
 # launch master
-echo JEF starting condor
+echo Starting condor \n
 export CONDOR_CONFIG=${FNAL_BASE_DIR}/condor_config
 /usr/sbin/condor_master
