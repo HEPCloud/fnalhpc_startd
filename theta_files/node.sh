@@ -1,4 +1,4 @@
 #!/bin/bash
 
-echo Launching on ${SLURM_NODEID}
-./launcher.py >launcher-${SLURM_NODEID}.out 2>launcher-${SLURM_NODEID}.err
+echo Launching on ${COBALT_PARTNAME} at -> ${HOSTNAME}
+./launcher.py >launcher-${COBALT_PARTNAME}.out 2>launcher-${COBALT_PARTNAME}.err

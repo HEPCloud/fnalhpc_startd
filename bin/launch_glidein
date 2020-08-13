@@ -36,6 +36,9 @@ EOF
 # create sshfs connection
 echo Creating sshfs connection
 ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR}
+
+read -n 1 -s -r -p "Check if -> ${THETA_BASE_DIR} was created"
+
 sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
 
 
@@ -43,7 +46,7 @@ sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_
 echo Writing THETA files \n
 mkdir theta_gpfs/rendezvous theta_gpfs/log theta_gpfs/execute
 cp -a ${SOURCE}/theta_files/* theta_gpfs/
-cat >theta_gpfs/job.slurm <<EOF
+cat >theta_gpfs/job.cobalt <<EOF
 #!/bin/bash
 
 # number of nodes
@@ -66,7 +69,7 @@ chmod a+rx theta_gpfs/job.cobalt
 echo Files written, blahp job already at login node ready to be submitted 
 
 # submit slurm job
-ssh ${THETA_USER}@theta.fnal.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 30 -n 2 job.cobalt'"
+ssh ${THETA_USER}@theta.alcf.anl.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 30 -n 2 job.cobalt'"
 echo ssh return $? \n
 
 read -n 1 -s -r -p "Done, now staring condor here -> ${HOSTNAME} .. continue? "
