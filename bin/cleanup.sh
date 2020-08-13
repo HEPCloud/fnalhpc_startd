@@ -11,5 +11,5 @@ rm -rf ./log
 rm -rf ./pool_password 
 rm -rf ./spool
 
-fusermount -u wc_gpfs
-rm -rf ./wc_gpfs
+fusermount -u theta_gpfs
+rm -rf ./theta_gpfs

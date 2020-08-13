@@ -1,26 +1,26 @@
 #!/bin/bash
 
-# Launch a glidein on a set of WC nodes
+# Launch a glidein on a set of THETA nodes
 
 if [ "$2" = "" ] ; then
-    echo "Usage: $0 <WC user> <node cnt> [<WC base directory>]" 1>&2
+    echo "Usage: $0 <THETA user> <node cnt> [<THETA base directory>]" 1>&2
     exit 1
 fi
 
-WC_USER="$1"
+THETA_USER="$1"
 NODE_CNT="$2"
-WC_BASE_DIR="$3"
-if [ "$WC_BASE_DIR" = "" ] ; then
-WC_BASE_DIR="$3"/glidein_`whoami`_$$
+THETA_BASE_DIR="$3"
+if [ "$THETA_BASE_DIR" = "" ] ; then
+THETA_BASE_DIR="$3"/glidein_`whoami`_$$
 fi
 GLIDEIN_NAME=`whoami`
 SOURCE=/cloud/login/macosta/fnalhpc_startd
 FNAL_BASE_DIR=`pwd`
 
-echo Using directory $WC_BASE_DIR at WC \n
+echo Using directory $THETA_BASE_DIR at THETA \n
 
 # Set up the local Condor installation
-echo Writing local files \n
+echo Writing local files 
 cp -dR ${SOURCE}/skeleton/* .
 chmod 400 pool_password
 echo LOCAL_DIR=${FNAL_BASE_DIR} >>condor_config
@@ -32,46 +32,44 @@ MASTER_NAME = $GLIDEIN_NAME
 STARTD_NAME = $GLIDEIN_NAME
 EOF
 
-read -n 1 -s -r -p "Done, Press any key to continue \n"
 
 # create sshfs connection
-echo Creating sshfs connection \n
-ssh ${WC_USER}@wc.fnal.gov mkdir ${WC_BASE_DIR}
-sshfs -o allow_other ${WC_USER}@wc.fnal.gov:${WC_BASE_DIR} ./wc_gpfs
+echo Creating sshfs connection
+ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR}
+sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
 
-read -n 1 -s -r -p "Done, Press any key to continue\n"
 
-# write wc files
-echo Writing WC files \n
-mkdir wc_gpfs/rendezvous wc_gpfs/log wc_gpfs/execute
-cp -a ${SOURCE}/wc_files/* wc_gpfs/
-cat >wc_gpfs/job.slurm <<EOF
+# write theta files
+echo Writing THETA files \n
+mkdir theta_gpfs/rendezvous theta_gpfs/log theta_gpfs/execute
+cp -a ${SOURCE}/theta_files/* theta_gpfs/
+cat >theta_gpfs/job.slurm <<EOF
 #!/bin/bash
 
-#SBATCH --nodes=1
-#SBATCH --qos=normal
-#SBATCH --time=01:45:00
-#SBATCH --partition=wc1cpu
-#SBATCH --error=job-%j.err
-#SBATCH --output=job-%j.out
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
+# number of nodes
+#COBALT -n 2
+# wall time request, this is 30min
+#COBALT -t 0:30:00
+# one of the two debug queues, only difference is KNL cache settings
+#COBALT -q debug-cache-quad
+# project, this should work for the ALCC allocation
+#COBALT -A HighLumin
 
-srun ./node.sh
+# MPI launcher, 2 nodes, 1 MPI rank per node
+# basically starts mycommand on both nodes in the batch job
+aprun -n 2 -N 1 --cc none ./node.sh
+
 EOF
 
-chmod a+rx wc_gpfs/job.slurm
+chmod a+rx theta_gpfs/job.cobalt
 
-echo Files written, blahp job already at login node ready to be submitted \n
-
-read -n 1 -s -r -p "Press any key to continue\n"
+echo Files written, blahp job already at login node ready to be submitted 
 
 # submit slurm job
-echo Submitted slurm job \n
-ssh ${WC_USER}@wc.fnal.gov /bin/bash -l -c "'cd ${WC_BASE_DIR}; sbatch job.slurm'"
+ssh ${THETA_USER}@theta.fnal.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 30 -n 2 job.cobalt'"
 echo ssh return $? \n
 
-read -n 1 -s -r -p "Done, now staring condor here -> ${HOSTNAME} .. continue? \n"
+read -n 1 -s -r -p "Done, now staring condor here -> ${HOSTNAME} .. continue? "
 
 # launch master
 echo Starting condor \n
