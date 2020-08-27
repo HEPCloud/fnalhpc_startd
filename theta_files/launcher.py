@@ -17,7 +17,7 @@ import traceback
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
 #ReleaseDir = "/home/ifae96/ifae96618/release_dir"
-ReleaseDir = "/usr"
+ReleaseDir = "/projects/HighLumin/htcondor_8_9_7/release_dir"
 ExecuteDir = WnBaseDir + "/execute"
 LogDir = WnBaseDir + "/log"
 
