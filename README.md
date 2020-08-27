@@ -13,11 +13,23 @@
 * When a user job matches and starts, the partitionable startd .. partitions .. one starter per slot will start at both the "bridge" node and the worker node.
 * This setup generates a good number of files which at scale might be problematic. Need to come up with something hopefully not chaotic.
 
+![Theta setup](https://drive.google.com/file/d/1rvwarDIIv4ymkJiTKFtbsYnDMmk1rR7b/view?usp=sharing)
+
 ### Update 08/26
-* HTCondor binaries need to be built on worker nodes. Won't work if built in login node since it has a slightly different OS. Both are SUSE based though
-* Build can't take any manual input, it needs to be automated on a shell script (located under /thetalogin/compile.sh) this script needs to be submitted through cobalt, which will ensure that it runs on a worker and builds what we need)
+* HTCondor binaries need to be built on worker nodes. Won't work if built in login node since it has a slightly different OS. Both are SUSE based though --> Works with some tweaks in Cmake (found some weirdness there which I notified HTCondor team of)
+* Build can't take any manual input, it needs to be automated on a shell script (located on this repo under /thetalogin/compile.sh) this script needs to be submitted through cobalt, which will ensure that it runs on a worker and builds what we need). DO NOT run this unless you know what the consequences might be)
 * I've added all necessary build flags for building condor "Unix" style see [1] plus some other flags needed for compiling on Theta
 * Also Dirk provided me with the corresponding submit file, also under /thetalogin/
+
+### Things to do if I have spare time
+* Thoroughly document the code, architecture and procedures
+* Try using `IDTOKEN` authentication instead of `PASSWORD`
+* Improve logging, perhaps unify launcher logs with cobalt stdout/err logs?
+
+### Questions
+* What will be the ratio of nodes/slots? 1 node = 1 partitionable slot (as of now). This is configurable
+* We need to figure out naming conventions for the SSHFS mount directories (one per slot? one per node?)
+* Is this all going to run under my account? -> Totally fine by me, condor binaries do live in shared storage
 
 
 [1] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=BuildingHtcondorOnLinux
