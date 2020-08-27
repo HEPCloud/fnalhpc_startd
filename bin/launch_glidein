@@ -13,7 +13,7 @@ THETA_BASE_DIR="$3"
 if [ "$THETA_BASE_DIR" = "" ] ; then
 THETA_BASE_DIR="$3"/glidein_`whoami`_$$
 fi
-GLIDEIN_NAME=`whoami`
+GLIDEIN_NAME="slot_$RANDOM@theta.alcf.anl.gov"
 SOURCE=/cloud/login/macosta/fnalhpc_startd
 FNAL_BASE_DIR=`pwd`
 
@@ -50,7 +50,7 @@ cat >theta_gpfs/job.cobalt <<EOF
 #!/bin/bash
 
 # number of nodes
-#COBALT -n 2
+#COBALT -n 1
 # wall time request, this is 30min
 #COBALT -t 0:30:00
 # one of the two debug queues, only difference is KNL cache settings
@@ -60,7 +60,7 @@ cat >theta_gpfs/job.cobalt <<EOF
 
 # MPI launcher, 2 nodes, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
-aprun -n 2 -N 1 --cc none ./node.sh
+aprun -n 1 -N 1 --cc none ./node.sh
 
 EOF
 
