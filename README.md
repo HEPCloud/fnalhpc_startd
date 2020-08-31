@@ -1,5 +1,5 @@
 # Split HTCondor StartD for HEPCloud integration with HPC sites
-* The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2]
+The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2]
 
 ## Findings:
 * User id and gid need to match between the "bridge" node and the login node at the HPC site
@@ -34,5 +34,7 @@
 
 
 [1] https://www.pic.es/areas/#lhc
+
 [2] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=RunCmsJobsAtBsc
+
 [3] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=BuildingHtcondorOnLinux
