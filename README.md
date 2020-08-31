@@ -1,4 +1,5 @@
 # Split HTCondor StartD for HEPCloud integration with HPC sites
+* The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2]
 
 ## Findings:
 * User id and gid need to match between the "bridge" node and the login node at the HPC site
@@ -11,14 +12,14 @@
 * I've adapted the `launch_glidein` script NOT to use the same directory over and over by changing the third imput parameter to a BASE folder instead. We are assuming to have a large number of glideins, hence need a large number of independent dirs.
 * Number of partitionable slots can be specified at runtime. As-is, the `launch_glidein` script will always request a single (1) node -- This is hardcoded. So in essence we are telling condor how to partition a single hpc worker node
 * When a user job matches and starts, the partitionable startd .. partitions .. one starter per slot will start at both the "bridge" node and the worker node.
-* This setup generates a good number of files which at scale might be problematic. Need to come up with something hopefully not chaotic.
+* This setup generates a good number of files which at scale might be problematic. Need to come up with something not chaotic.
 
 ![Theta setup](https://www.dropbox.com/s/koebu2pz0nn8hch/Theta_setup_v1.jpg?raw=1)
 
 ### Update 08/26
 * HTCondor binaries need to be built on worker nodes. Won't work if built in login node since it has a slightly different OS. Both are SUSE based though --> Works with some tweaks in Cmake (found some weirdness there which I notified HTCondor team of)
 * Build can't take any manual input, it needs to be automated on a shell script (located on this repo under /thetalogin/compile.sh) this script needs to be submitted through cobalt, which will ensure that it runs on a worker and builds what we need). DO NOT run this unless you know what the consequences might be)
-* I've added all necessary build flags for building condor "Unix" style see [1] plus some other flags needed for compiling on Theta
+* I've added all necessary build flags for building condor "Unix" style see [3] plus some other flags needed for compiling on Theta
 * Also Dirk provided me with the corresponding submit file, also under /thetalogin/
 
 ### Things to do if I have spare time
@@ -32,4 +33,6 @@
 * Is this all going to run under my account? -> Totally fine by me, condor binaries do live in shared storage
 
 
-[1] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=BuildingHtcondorOnLinux
+[1] https://www.pic.es/areas/#lhc
+[2] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=RunCmsJobsAtBsc
+[3] https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=BuildingHtcondorOnLinux
