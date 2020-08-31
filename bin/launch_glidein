@@ -17,7 +17,7 @@ GLIDEIN_NAME="slot_$RANDOM@theta.alcf.anl.gov"
 SOURCE=/cloud/login/macosta/fnalhpc_startd
 FNAL_BASE_DIR=`pwd`
 
-echo Using directory $THETA_BASE_DIR at THETA \n
+echo Using directory $THETA_BASE_DIR at THETA
 
 # Set up the local Condor installation
 echo Writing local files 
@@ -52,13 +52,13 @@ cat >theta_gpfs/job.cobalt <<EOF
 # number of nodes
 #COBALT -n 1
 # wall time request, this is 30min
-#COBALT -t 0:30:00
+#COBALT -t 1:00:00
 # one of the two debug queues, only difference is KNL cache settings
 #COBALT -q debug-cache-quad
 # project, this should work for the ALCC allocation
 #COBALT -A HighLumin
 
-# MPI launcher, 2 nodes, 1 MPI rank per node
+# MPI launcher, 1 node, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
 aprun -n 1 -N 1 --cc none ./node.sh
 
