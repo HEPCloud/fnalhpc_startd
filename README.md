@@ -13,7 +13,7 @@
 * When a user job matches and starts, the partitionable startd .. partitions .. one starter per slot will start at both the "bridge" node and the worker node.
 * This setup generates a good number of files which at scale might be problematic. Need to come up with something hopefully not chaotic.
 
-![Theta setup](https://drive.google.com/file/d/1rvwarDIIv4ymkJiTKFtbsYnDMmk1rR7b/view?usp=sharing)
+![Theta setup](https://www.dropbox.com/s/koebu2pz0nn8hch/Theta_setup_v1.jpg)
 
 ### Update 08/26
 * HTCondor binaries need to be built on worker nodes. Won't work if built in login node since it has a slightly different OS. Both are SUSE based though --> Works with some tweaks in Cmake (found some weirdness there which I notified HTCondor team of)
