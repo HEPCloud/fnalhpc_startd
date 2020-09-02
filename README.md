@@ -31,6 +31,7 @@ The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2] wh
 * What will be the ratio of nodes/slots? 1 node = 1 partitionable slot (as of now). This is configurable
 * We need to figure out naming conventions for the SSHFS mount directories (one per slot? one per node?)
 * Is this all going to run under my account? -> Totally fine by me, condor binaries do live in shared storage
+* Where are we keeping scratch areas? Shared (project) storage?
 
 
 [1] https://www.pic.es/areas/#lhc
