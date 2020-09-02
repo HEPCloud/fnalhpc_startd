@@ -21,6 +21,12 @@ The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2] wh
 * Build can't take any manual input, it needs to be automated on a shell script (located on this repo under /thetalogin/compile.sh) this script needs to be submitted through cobalt, which will ensure that it runs on a worker and builds what we need). DO NOT run this unless you know what the consequences might be)
 * I've added all necessary build flags for building condor "Unix" style see [3] plus some other flags needed for compiling on Theta
 * Also Dirk provided me with the corresponding submit file, also under /thetalogin/
+* If there are jobs in the queue and the cobalt job has not started running, the startd will reject the job. It's not only until the cobalt job starts running that it advertizes itself as ready. On the next negotiation cycle, it will be considered as Idle/Unclaimed and be matched to the job.
+```
+052.000:  Run analysis summary ignoring user priority.  Of 8 machines,
+     7 are rejected by your job's requirements
+     1 reject your job because of their own requirements ---> This is a queued cobalt job
+```
 
 ### Things to do if I have spare time
 * Thoroughly document the code, architecture and procedures
