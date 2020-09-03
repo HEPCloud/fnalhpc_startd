@@ -16,7 +16,7 @@ The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2] wh
 
 ![Theta setup](https://www.dropbox.com/s/koebu2pz0nn8hch/Theta_setup_v1.jpg?raw=1)
 
-### Update 08/26
+### Update on notes
 * HTCondor binaries need to be built on worker nodes. Won't work if built in login node since it has a slightly different OS. Both are SUSE based though --> Works with some tweaks in Cmake (found some weirdness there which I notified HTCondor team of)
 * Build can't take any manual input, it needs to be automated on a shell script (located on this repo under /thetalogin/compile.sh) this script needs to be submitted through cobalt, which will ensure that it runs on a worker and builds what we need). DO NOT run this unless you know what the consequences might be)
 * I've added all necessary build flags for building condor "Unix" style see [3] plus some other flags needed for compiling on Theta
@@ -27,6 +27,7 @@ The following setup is based on Jaime Frey and PIC[1]'s IT team prototype [2] wh
      7 are rejected by your job's requirements
      1 reject your job because of their own requirements ---> This is a queued cobalt job
 ```
+* If the cobalt job finishes/exits the Startd's won't advertize themselves as "Unavailable" nor is the job being released back to the queue. This is problematic because the code as-is doesn't communicate back the termination and keeps the collector/negotiator confused. See https://hepcloud-git.fnal.gov/macosta/fnalhpc_startd/-/issues/1
 
 ### Things to do if I have spare time
 * Thoroughly document the code, architecture and procedures
