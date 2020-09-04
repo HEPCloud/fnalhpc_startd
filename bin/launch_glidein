@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Launch a glidein on a set of THETA nodes
+# Launch a full stack CMS glidein on a set of THETA nodes
 
 if [ "$2" = "" ] ; then
     echo "Usage: $0 <THETA user> <node cnt> [<THETA base directory>]" 1>&2
@@ -10,10 +10,14 @@ fi
 THETA_USER="$1"
 NODE_CNT="$2"
 THETA_BASE_DIR="$3"
+
+SLOT_PREFIX="cobalt_${RANDOM}"
+GLIDEIN_NAME="$SLOT_PREFIX@theta.alcf.anl.gov"
+
 if [ "$THETA_BASE_DIR" = "" ] ; then
-THETA_BASE_DIR="$3"/glidein_`whoami`_$$
+ THETA_BASE_DIR="/projects/HighLumin/job_area/${SLOT_PREFIX}"
 fi
-GLIDEIN_NAME="slot_$RANDOM@theta.alcf.anl.gov"
+
 SOURCE=/cloud/login/macosta/fnalhpc_startd
 FNAL_BASE_DIR=`pwd`
 
@@ -35,11 +39,7 @@ EOF
 
 # create sshfs connection
 echo Creating sshfs connection
-ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR}
-
-read -n 1 -s -r -p "Check if -> ${THETA_BASE_DIR} was created"
-
-sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
+ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR} && sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
 
 
 # write theta files
@@ -50,7 +50,7 @@ cat >theta_gpfs/job.cobalt <<EOF
 #!/bin/bash
 
 # number of nodes
-#COBALT -n 1
+#COBALT -n $NODE_CNT
 # wall time request, this is 30min
 #COBALT -t 1:00:00
 # one of the two debug queues, only difference is KNL cache settings
@@ -60,21 +60,24 @@ cat >theta_gpfs/job.cobalt <<EOF
 
 # MPI launcher, 1 node, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
-aprun -n 1 -N 1 --cc none ./node.sh
+aprun -n $NODE_CNT -N 1 --cc none -e MY_BASE_DIR=$THETA_BASE_DIR -e HTC_RELEASE_DIR=/projects/HighLumin/htcondor_8_9_7/release_dir ./cms_init_start.sh
 
 EOF
 
 chmod a+rx theta_gpfs/job.cobalt
 
-echo Files written, blahp job already at login node ready to be submitted 
+echo Files written, job already at login node ready to be submitted
 
-# submit slurm job
-ssh ${THETA_USER}@theta.alcf.anl.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 30 -n 2 job.cobalt'"
-echo ssh return $? \n
-
-read -n 1 -s -r -p "Done, now staring condor here -> ${HOSTNAME} .. continue? "
-
-# launch master
-echo Starting condor \n
+# submit cobalt job
+ssh ${THETA_USER}@theta.alcf.anl.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 60 -n $NODE_CNT job.cobalt'"
+#echo ssh return $?
+submitResult=$?
+if [ $submitResult -ne 0 ]; then
+    echo "Couldn't submit cobalt job, aborting"
+    exit $submitResult
+fi
+echo "Cobalt job submitted, starting local Condor"
+#test $? -eq 0 && echo "Cobalt job submitted, starting local Condor" || echo "Couldn't submit cobalt job, aborting" && exit
 export CONDOR_CONFIG=${FNAL_BASE_DIR}/condor_config
 /usr/sbin/condor_master
+
