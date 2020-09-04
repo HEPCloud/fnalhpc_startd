@@ -3,5 +3,5 @@
 FNAL_BASE_DIR=`pwd`
 export CONDOR_CONFIG=${FNAL_BASE_DIR}/condor_config
 condor_off -master
-fusermount -u ${FNAL_BASE_DIR}/wc_gpfs
+fusermount -u ${FNAL_BASE_DIR}/theta_gpfs
 # TODO cancel slurm job?
