@@ -134,8 +134,8 @@ def main():
     status_tmp_fname = status_fname + ".tmp"
 
     job_name_prefix = ""
-    if "SLURM_NODEID" in os.environ:
-        job_name_prefix = "slot%d_" % (int(os.environ["SLURM_NODEID"]) + 1)
+    if "COBALT_PARTNAME" in os.environ:
+        job_name_prefix = "slot%d_" % (int(os.environ["COBALT_PARTNAME"]) + 1)
         print "Using job name prefix '%s'" % job_name_prefix
 
     while True:
