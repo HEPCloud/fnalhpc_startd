@@ -38,8 +38,11 @@ EOF
 
 
 # create sshfs connection
-echo Creating sshfs connection
-ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR} && sshfs -o allow_other ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
+echo Creating base directory
+ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR} 
+
+echo Creating SSHFS bridge
+sshfs -o allow_other -o nonempty ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
 
 
 # write theta files
