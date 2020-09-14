@@ -134,9 +134,12 @@ def main():
     status_tmp_fname = status_fname + ".tmp"
 
     job_name_prefix = ""
-    if "COBALT_PARTNAME" in os.environ:
+    if "COBALT_PARTNAMEiA" in os.environ:
         job_name_prefix = "slot%d_" % (int(os.environ["COBALT_PARTNAME"]) + 1)
         print "Using job name prefix '%s'" % job_name_prefix
+    else:
+        job_name_prefix = "slot12331"
+        print "Using job name prefix outside of if'%s'" % job_name_prefix
 
     while True:
         print "*** Starting scan ***"
@@ -159,6 +162,9 @@ def main():
             input_file = os.path.join(FsBaseDir, "%s.tar.gz" % job_name)
             output_file = os.path.join(FsBaseDir, "%s.out.tar.gz" % job_name)
             if os.access(output_file, os.F_OK) == True:
+                print("We finished this job, ignore it")
+                print(job_name)
+                print(output_file)
                 # We finished this job, ignore it
                 continue
             all_input_jobs.add(job_name)

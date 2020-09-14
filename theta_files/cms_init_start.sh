@@ -26,10 +26,13 @@ mkdir -p /dev/shm/HighLumin/cvmfs-cache
 cd /dev/shm/HighLumin
 tar xzf /projects/HighLumin/cvmfsexec_dev_shm_HighLumin.tgz
 
+cd ${MY_BASE_DIR}
 
-#/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "ls /cvmfs ; python ${MY_BASE_DIR}/launcher.py"
 
+/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
+#/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "./node.sh"
+
+#python ${MY_BASE_DIR}/launcher.py
 
 echo "===== When Startd exits, stop local squid and cleanup"
 /dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh stop
