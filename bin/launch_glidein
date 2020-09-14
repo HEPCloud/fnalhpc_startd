@@ -42,7 +42,7 @@ echo Creating base directory
 ssh ${THETA_USER}@theta.alcf.anl.gov mkdir ${THETA_BASE_DIR} 
 
 echo Creating SSHFS bridge
-sshfs -o allow_other -o nonempty ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
+sshfs -o allow_other -o nonempty -o idmap=user,uid=35068,gid=10737 ${THETA_USER}@theta.alcf.anl.gov:${THETA_BASE_DIR} ./theta_gpfs
 
 
 # write theta files
