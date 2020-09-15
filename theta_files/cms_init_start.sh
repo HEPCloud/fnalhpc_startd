@@ -2,7 +2,7 @@
 
 BASE=${PWD}
 
-echo clean possible leftovers from previous jobs
+echo "====== Cleaning up possible leftovers from previous jobs"
 /usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
 /usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/unpacked.cern.ch >& /dev/null
 /usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/oasis.opensciencegrid.org >& /dev/null
@@ -34,11 +34,6 @@ CMD="source ./node.sh"
 cd ${BASE}
 #/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
 /dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "ls /cvmfs ; pwd ; ls -ltra ; python launcher.py"
-
-/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-#/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "./node.sh"
-
-#python ${MY_BASE_DIR}/launcher.py
 
 echo "===== When Startd exits, stop local squid and cleanup"
 /dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh stop
