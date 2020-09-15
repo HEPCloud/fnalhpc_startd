@@ -1,5 +1,7 @@
 #!/bin/bash
 
+BASE=${PWD}
+
 echo clean possible leftovers from previous jobs
 /usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
 /usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/unpacked.cern.ch >& /dev/null
@@ -25,8 +27,9 @@ tar xzf /projects/HighLumin/cvmfsexec_dev_shm_HighLumin.tgz
 python --version
 
 CMD="source ./node.sh"
+cd ${BASE}
 #/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py"
+/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "ls /cvmfs ; pwd ; ls -ltra ; python launcher.py"
 
 
 
