@@ -7,6 +7,8 @@ function do_submit ()
 {
   echo do_submit
   tar zcf ${JOB_NAME}.tar.gz * .??*
+  echo "JOB NAAME? -> ${JOB_NAME}"
+  echo "ReMOTE DIR? -> ${REMOTE_DIR}"
   mv ${JOB_NAME}.tar.gz $REMOTE_DIR
 }
 
@@ -56,7 +58,7 @@ case $1 in
     do_submit
     do_wait
     do_stageout
-    #do_remove
+    do_remove
     ;;
   *)
     echo "Unknown command"
