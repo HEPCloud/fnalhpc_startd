@@ -14,11 +14,10 @@ import traceback
 #import classad
 #import htcondor
 
-#WnBaseDir = os.getcwd()
-WnBaseDir = os.getenv('MY_BASE_DIR', os.getcwd())
+WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
 #ReleaseDir = "/home/ifae96/ifae96618/release_dir"
-ReleaseDir = os.getenv('HTC_RELEASE_DIR',"/projects/HighLumin/htcondor_8_9_7/release_dir")
+ReleaseDir = "/projects/HighLumin/htcondor_8_9_7/release_dir"
 ExecuteDir = WnBaseDir + "/execute"
 LogDir = WnBaseDir + "/log"
 
