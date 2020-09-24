@@ -33,7 +33,7 @@ cd ${MY_BASE_DIR}
 CMD="source ./node.sh"
 cd ${BASE}
 #/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "ls /cvmfs ; pwd ; ls -ltra ; python launcher.py"
+/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "echo ${MY_JOBID} ; python launcher.py"
 
 echo "===== When Startd exits, stop local squid and cleanup"
 /dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh stop
