@@ -16,7 +16,6 @@ import traceback
 
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
-#ReleaseDir = "/home/ifae96/ifae96618/release_dir"
 ReleaseDir = "/projects/HighLumin/htcondor_8_9_7/release_dir"
 ExecuteDir = WnBaseDir + "/execute"
 LogDir = WnBaseDir + "/log"
@@ -26,12 +25,16 @@ JobList = {}
 def DoSubmit( job_name ):
     print "Submit %s" % job_name
     full_input_file = os.path.join( FsBaseDir, "%s.tar.gz" % job_name )
+    print "Full input file -> "+full_input_file
     full_execute_dir = os.path.join( ExecuteDir, job_name )
+    print "Full execute dir -> " + full_execute_dir
 
     try:
-        os.mkdir(full_execute_dir, 0700)
+        os.mkdir(dfull_execute_dir, 0700)
+        print "Created dir -> " + full_execute_dir
         in_tar = tarfile.open(full_input_file, 'r')
         in_tar.extractall(full_execute_dir)
+        print "Extracted " + full_input_file + " at " + full_execute_dir
 
         starter_args = [ os.path.join( ReleaseDir, "sbin", "condor_starter" ),
                          "-gridshell",
@@ -41,6 +44,7 @@ def DoSubmit( job_name ):
                          os.path.join( full_execute_dir, ".job.ad.out" )
                          ]
         starter = subprocess.Popen(args = starter_args, cwd = full_execute_dir)
+        print "Started standalone condor starter"
 
         JobList[job_name] = starter
     except:
@@ -76,7 +80,7 @@ def DoSendOutput(job_name):
     return True
 
 def DoStatusCheck():
-    print "StatusCheck"
+    print "StatusCheck --> I am here "+ os.getcwd()
     if len(JobList) == 0:
         print "  no jobs, skipping check"
         return True
@@ -133,18 +137,16 @@ def main():
     status_tmp_fname = status_fname + ".tmp"
 
     job_name_prefix = ""
-    if "COBALT_PARTNAMEiA" in os.environ:
-        job_name_prefix = "slot%d_" % (int(os.environ["COBALT_PARTNAME"]) + 1)
-        print "Using job name prefix '%s'" % job_name_prefix
-    else:
-        job_name_prefix = "slot12331"
-        print "Using job name prefix outside of if'%s'" % job_name_prefix
+    if "MY_JOBID" in os.environ:
+        job_name_prefix = "slot%d_" % (int(os.environ["MY_JOBID"]) + 1)
+#        print "Using job name prefix '%s'" % job_name_prefix
+    print "Job name prefix is -> " + job_name_prefix
 
     while True:
         print "*** Starting scan ***"
         print time.ctime()
         if time.time() >= status_write_time + 60:
-            print "Writing status file"
+            print "Writing status file at "+status_fname
             fd = open(status_tmp_fname, "wb")
             fd.write("WnTime=%d\n" % time.time())
             fd.close()
@@ -152,8 +154,10 @@ def main():
             status_write_time = time.time()
         all_input_jobs = set()
         for input_file in os.listdir(FsBaseDir):
+            print "Scanning for tgz files at -> " + FsBaseDir
             print input_file
-            m = re.match("(%s[^.]+)\.tar\.gz$" % job_name_prefix, input_file)
+            print "Matching input file ->" + input_file + " with regexp to job name prefix" + job_name_prefix + ".tgz"
+            m = re.match("([^.]+)\.tar\.gz$", input_file)
             if m == None:
                 print "  Skipping file"
                 continue
@@ -170,6 +174,7 @@ def main():
             if job_name not in JobList:
                 print "  Need to submit"
                 rc = DoSubmit(job_name)
+                print " Submitted -> "+job_name+" now we wait"
                 if rc == False:
                     print "Submit failed"
         for removed_job in JobList.viewkeys() - all_input_jobs:
