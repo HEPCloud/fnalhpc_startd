@@ -30,7 +30,7 @@ def DoSubmit( job_name ):
     print "Full execute dir -> " + full_execute_dir
 
     try:
-        os.mkdir(dfull_execute_dir, 0700)
+        os.mkdir(full_execute_dir, 0700)
         print "Created dir -> " + full_execute_dir
         in_tar = tarfile.open(full_input_file, 'r')
         in_tar.extractall(full_execute_dir)
