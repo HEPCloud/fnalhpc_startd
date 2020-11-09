@@ -3,38 +3,57 @@
 BASE=${PWD}
 
 echo "====== Cleaning up possible leftovers from previous jobs"
-/usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
-/usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/unpacked.cern.ch >& /dev/null
-/usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/oasis.opensciencegrid.org >& /dev/null
-/usr/bin/fusermount -u /dev/shm/HighLumin/cvmfsexec/dist/cvmfs/cms.cern.ch >& /dev/null
-rm -rfd /dev/shm/HighLumin >& /dev/null
+# clean possible leftovers from previous jobs
+/usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
+/usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/cms.cern.ch >& /dev/null
+rm -rfd /dev/shm/frontier-cache >& /dev/null
+rm -rfd /dev/shm/cvmfs-cache >& /dev/null
+rm -rfd /dev/shm/cvmfsexec >& /dev/null
+/usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
+/usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/cms.cern.ch >& /dev/null
+rm -rfd /tmp/frontier-cache >& /dev/null
+rm -rfd /tmp/cvmfs-cache >& /dev/null
+rm -rfd /tmp/cvmfsexec >& /dev/null
+rm -rfd /local/scratch/uscms >& /dev/null
 
 sleep 5
 
 echo "====== Deploying and starting local squid"
-mkdir -p /dev/shm/HighLumin
-cd /dev/shm/HighLumin
-tar xzf /projects/HighLumin/frontier-cache_dev_shm_HighLumin.tgz
-/dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh start
-/dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh status
+mkdir -p /local/scratch/uscms
+cd /local/scratch/uscms
+tar xzf /projects/HighLumin/uscms/frontier-cache_local_scratch.tgz
+/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start
 
 echo "====== Setting relevant environment variables"
 export CMS_LOCAL_SITE=T3_US_HEPCloud
 export SINGULARITY_BIN=/cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity
-export PATH=$PATH:$SINGULARITY_BIN
+export HTC_BIN=/projects/HighLumin/htcondor_8_9_7/release_dir/bin
+export HTC_SBIN=/projects/HighLumin/htcondor_8_9_7/release_dir/sbin
+export HTC_LIB=/projects/HighLumin/htcondor_8_9_7/release_dir/lib
+export HTC_LIBEXEC=/projects/HighLumin/htcondor_8_9_7/release_dir/libexec
+export HTC_ALL=$HTC_BIN:$HTC_SBIN:$HTC_LIB:$HTC_LIBEXEC
+export PATH=$PATH:$SINGULARITY_BIN:$HTC_ALL
+
+echo $PATH
+
+which condor_chirp
 
 echo "====== Configuring CVMFS, if successful, start HTCondor"
-mkdir -p /dev/shm/HighLumin/cvmfs-cache
-cd /dev/shm/HighLumin
-tar xzf /projects/HighLumin/cvmfsexec_dev_shm_HighLumin.tgz
+mkdir -p /local/scratch/uscms/cvmfs-cache
+cd /local/scratch/uscms
+tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
 
 cd ${MY_BASE_DIR}
-
-CMD="source ./node.sh"
 cd ${BASE}
 #/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "echo ${MY_JOBID} ; python launcher.py"
+/local/scratch/uscms/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "echo ${MY_JOBID} ; python launcher.py"
 
 echo "===== When Startd exits, stop local squid and cleanup"
-/dev/shm/HighLumin/frontier-cache/utils/bin/fn-local-squid.sh stop
-rm -rfd /dev/shm/HighLumin >& /dev/null
+/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
+rm -rfd /dev/shm/frontier-cache >& /dev/null
+rm -rfd /dev/shm/cvmfs-cache >& /dev/null
+rm -rfd /dev/shm/cvmfsexec >& /dev/null
+rm -rfd /tmp/frontier-cache >& /dev/null
+rm -rfd /tmp/cvmfs-cache >& /dev/null
+rm -rfd /tmp/cvmfsexec >& /dev/null
+rm -rfd /local/scratch/uscms >& /dev/null
