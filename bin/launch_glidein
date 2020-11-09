@@ -57,9 +57,9 @@ cat >theta_gpfs/job.cobalt <<EOF
 # number of nodes
 #COBALT -n ${NODE_CNT}
 # wall time request, this is 30min
-#COBALT -t 3:00:00
+#COBALT -t 1:00:00
 # one of the two debug queues, only difference is KNL cache settings
-#COBALT -q default
+#COBALT -q debug-cache-quad
 # project, this should work for the ALCC allocation
 #COBALT -A HighLumin
 
@@ -77,7 +77,7 @@ echo ====== Files written
 echo ====== Submitting COBALT job from login node
 
 # Submit cobalt job
-ssh ${THETA_USER}@theta.alcf.anl.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q default -t 180 -n ${NODE_CNT} job.cobalt'"
+ssh ${THETA_USER}@theta.alcf.anl.gov /bin/bash -l -c "'cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug-cache-quad -t 60 -n ${NODE_CNT} job.cobalt'"
 echo Submit return code $?
 
 # launch master
