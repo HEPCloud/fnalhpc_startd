@@ -16,7 +16,7 @@ rm -rfd /tmp/cvmfs-cache >& /dev/null
 rm -rfd /tmp/cvmfsexec >& /dev/null
 rm -rfd /local/scratch/uscms >& /dev/null
 
-sleep 5
+sleep 15
 
 echo "====== Deploying and starting local squid"
 mkdir -p /local/scratch/uscms
