@@ -14,15 +14,15 @@ rm -rfd /dev/shm/cvmfsexec >& /dev/null
 rm -rfd /tmp/frontier-cache >& /dev/null
 rm -rfd /tmp/cvmfs-cache >& /dev/null
 rm -rfd /tmp/cvmfsexec >& /dev/null
-rm -rfd /local/scratch/uscms >& /dev/null
+rm -rfd /local/scratch/mu2e >& /dev/null
 
 sleep 5
 
 echo "====== Deploying and starting local squid"
-mkdir -p /local/scratch/uscms
-cd /local/scratch/uscms
-tar xzf /projects/HighLumin/uscms/frontier-cache_local_scratch.tgz
-/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start
+mkdir -p /local/scratch/mu2e
+cd /local/scratch/mu2e
+tar xzf /projects/HighLumin/mu2e/frontier-cache_local_scratch.tgz
+/local/scratch/mu2e/frontier-cache/utils/bin/fn-local-squid.sh start
 
 echo "====== Setting relevant environment variables"
 export HTC_BIN=/projects/HighLumin/htcondor_8_9_7/release_dir/bin
@@ -34,21 +34,21 @@ export PATH=$PATH:$SINGULARITY_BIN:$HTC_ALL
 
 
 echo "====== Configuring CVMFS, if successful, start HTCondor"
-mkdir -p /local/scratch/uscms/cvmfs-cache
-cd /local/scratch/uscms
-tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
+mkdir -p /local/scratch/mu2e/cvmfs-cache
+cd /local/scratch/mu2e
+tar xzf /projects/HighLumin/mu2e/cvmfsexec_local_scratch.tgz
 
 cd ${MY_BASE_DIR}
 cd ${BASE}
 #/dev/shm/HighLumin/cvmfsexec/cvmfsexec cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ls /cvmfs ; cd ${MY_BASE_DIR} && python ${MY_BASE_DIR}/launcher.py
-/local/scratch/uscms/cvmfsexec/cvmfsexec mu2e.opensciencegrid.org fermilab.opensciencegrid.org -- $SHELL -c "echo ${MY_JOBID} ; python launcher.py"
+/local/scratch/mu2e/cvmfsexec/cvmfsexec mu2e.opensciencegrid.org fermilab.opensciencegrid.org -- $SHELL -c "echo ${MY_JOBID} ; python launcher.py"
 
 echo "===== When Startd exits, stop local squid and cleanup"
-/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
+/local/scratch/mu2e/frontier-cache/utils/bin/fn-local-squid.sh stop
 rm -rfd /dev/shm/frontier-cache >& /dev/null
 rm -rfd /dev/shm/cvmfs-cache >& /dev/null
 rm -rfd /dev/shm/cvmfsexec >& /dev/null
 rm -rfd /tmp/frontier-cache >& /dev/null
 rm -rfd /tmp/cvmfs-cache >& /dev/null
 rm -rfd /tmp/cvmfsexec >& /dev/null
-rm -rfd /local/scratch/uscms >& /dev/null
+rm -rfd /local/scratch/mu2e >& /dev/null
