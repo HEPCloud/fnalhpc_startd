@@ -1,0 +1,125 @@
+#!/bin/bash
+
+# Launch a full stack CMS glidein on a set of THETA nodes
+
+if [ "$2" = "help" ] ; then
+    echo "Usage: $0 <THETA user> <node cnt> [<THETA base directory>]" 1>&2
+    exit 1
+fi
+
+# Gathering parameters for the request
+# Hardcoding these for now
+#THETA_USER="$1"
+THETA_USER=macosta
+#NODE_CNT="$2"
+NODE_CNT=1
+#QUEUE="$4"
+QUEUE=debug-cache-quadd
+
+
+#SSD='false'
+
+# Process all options supplied on the command line
+#while getopts ':x' 'OPTKEY'; do
+#    case ${OPTKEY} in
+##        'x')
+#            # Update the value of the option x flag we defined above
+#            OPT_X='true'
+#            ;;
+#        '?')
+#            echo "INVALID OPTION -- ${OPTARG}" >&2
+#            exit 1
+#            ;;
+#        ':')
+#            echo "MISSING ARGUMENT for option -- ${OPTARG}" >&2
+#            exit 1
+#           ;;
+#        *)
+#            echo "UNIMPLEMENTED OPTION -- ${OPTKEY}" >&2
+#            exit 1
+#           ;;
+#    esac
+#done
+
+JOB_ID=${RANDOM}
+SLOT_PREFIX="cobalt_${JOB_ID}"
+GLIDEIN_NAME="cobalt_${JOB_ID}@theta.alcf.anl.gov"
+THETA_BASE_DIR="/projects/HighLumin/job_area/${SLOT_PREFIX}"
+SOURCE="$(dirname "${PWD}")"
+EDGE_BASE_DIR=`pwd`
+
+echo "====== Starting split starter at ${HOSTNAME} under local Linux user ${whoami}"
+
+echo Using directory $THETA_BASE_DIR
+
+# Set up local Condor installation
+echo ====== Writing local files
+cp -dR ${SOURCE}/skeleton/* .
+chmod 400 pool_password
+echo LOCAL_DIR=${EDGE_BASE_DIR} >>condor_config
+cat >config.d/97-personal2.conf <<EOF
+# Run-time settings for this personal condor setup
+#new startd name
+NUM_SLOTS_TYPE_1 = $NODE_CNT
+MASTER_NAME = $GLIDEIN_NAME
+STARTD_NAME = $GLIDEIN_NAME
+EOF
+
+cat >config.d/99-test.conf <<EOF
+# Passing the local dir to condor
+LOCAL_DIR = $THETA_BASE_DIR
+EOF
+
+
+# create sshfs connection
+echo ====== Creating base directory on shared storage
+mkdir ${THETA_BASE_DIR}
+echo ${THETA_BASE_DIR}
+#cp ./theta_gpfs/* ${THETA_BASE_DIR}/
+sleep 10
+
+
+# write theta files
+echo ====== Writing files on shared storage
+mkdir ${THETA_BASE_DIR}/rendezvous ${THETA_BASE_DIR}/log ${THETA_BASE_DIR}/execute
+cp -a ${SOURCE}/theta_files/* ${THETA_BASE_DIR}/
+cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
+#!/bin/bash
+
+# number of nodes
+#COBALT -n ${NODE_CNT}
+# wall time request, this is 30min
+#COBALT -t 1:00:00
+# one of the two debug queues, only difference is KNL cache settings
+#COBALT -q debug_cache_quad
+# project, this should work for the ALCC allocation
+#COBALT -A HighLumin
+
+export MY_JOBID=${JOB_ID}
+# MPI launcher, 1 node, 1 MPI rank per node
+# basically starts mycommand on both nodes in the batch job
+aprun -n ${NODE_CNT} -N 1 --cc none ./cms_init_start.sh
+
+EOF
+
+chmod a+rx ${THETA_BASE_DIR}/job.cobalt
+
+echo ====== Files written
+
+echo ====== Submitting COBALT job from login node
+
+# Submit cobalt job
+sleep 10
+cd ${THETA_BASE_DIR}; qsub -A HighLumin -q debug_cache_quad -t 60 -n ${NODE_CNT} --attr ssds=required job.cobalt
+#echo "cd ${THETA_BASE_DIR}; qsub -A HighLumin -q default -t 180 -n ${NODE_CNT} --attr ssds=required job.cobalt"
+
+echo qsub at ${THETA_BASE_DIR}
+echo Submit return code $?
+
+# launch master
+echo ====== Starting local condor
+export CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config
+echo ${CONDOR_CONFIG}
+#echo /lus/theta-fs0/projects/HighLumin/htcondor_8_9_7/release_dir/sbin/condor_master
+sleep 10
+/usr/sbin/condor_master
