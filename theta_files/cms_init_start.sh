@@ -33,10 +33,12 @@ export HTC_LIB=/projects/HighLumin/htcondor_8_9_7/release_dir/lib
 export HTC_LIBEXEC=/projects/HighLumin/htcondor_8_9_7/release_dir/libexec
 export HTC_ALL=$HTC_BIN:$HTC_SBIN:$HTC_LIB:$HTC_LIBEXEC
 export PATH=$PATH:$SINGULARITY_BIN:$HTC_ALL
+export SINGULARITYENV_APPEND_PATH=$HTC_LIBEXEC
 
 echo $PATH
 
-which condor_chirp
+whereis condor_chirp
+
 
 echo "====== Configuring CVMFS, if successful, start HTCondor"
 mkdir -p /local/scratch/uscms/cvmfs-cache
