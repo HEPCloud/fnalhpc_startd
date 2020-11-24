@@ -17,7 +17,6 @@ import traceback
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
 ReleaseDir = "/projects/HighLumin/htcondor_8_9_7/release_dir"
-ChirpDir = "/projects/HighLumin/htcondor_8_9_7/release_dir/libexec/condor_chirp"
 ExecuteDir = WnBaseDir + "/execute"
 LogDir = WnBaseDir + "/log"
 
@@ -26,11 +25,12 @@ JobList = {}
 def DoSubmit( job_name ):
     print "Submit %s" % job_name
     full_input_file = os.path.join( FsBaseDir, "%s.tar.gz" % job_name )
-    print "Full input file -> "+full_input_file
     full_execute_dir = os.path.join( ExecuteDir, job_name )
-    print "Full execute dir -> " + full_execute_dir
 
     try:
+        if os.path.isdir(full_execute_dir):
+            print("File exists, probably leftover, removing and re-submitting")
+            shutil.rmtree(full_execute_dir)
         os.mkdir(full_execute_dir, 0700)
         print "Created dir -> " + full_execute_dir
         in_tar = tarfile.open(full_input_file, 'r')
@@ -64,19 +64,15 @@ def DoSendOutput(job_name):
 
     try:
         out_tar = tarfile.open(name=tmp_output_file, mode='w:gz')
-
-        # 4 DEBUGGING
-        print("WHAT IS OUT TAR? " + out_tar)
-        print(tarfile.getnames())
-        print("AAAAA NAMES ARRIBA MEMBERS ABAJOO")
-        print(tarfile.getmembers())
-
-        if os.path.isfile(full_execute_dir+".chirp.ad") and os.path.isfile(full_execute_dir+".job.ad.out"):
-            try:
-                with open(full_execute_dir+".job.ad.out", "w") as jobout:
-                with open(full_execute_dir+".chirp.ad",'r') as chirp: jobout.write(chirp.read())
-            except:
-                print("something went wrong")
+        isChirp=os.path.isfile(os.path.join(full_execute_dir,".chirp.ad"))
+        isJobad=os.path.isfile(os.path.join(full_execute_dir,".job.ad.out"))
+        if isChirp and isJobad:
+            with open(os.path.join(full_execute_dir,".job.ad.out"), "a+") as jobout, \
+                 open(os.path.join(full_execute_dir,".chirp.ad"),'rb') as chirp:
+                jobout.write(chirp.read())
+                jobout.flush()
+                jobout.close()
+                chirp.close()
 
         # TODO skip files older than job start time?
         for job_file in os.listdir(full_execute_dir):
@@ -145,7 +141,6 @@ def main():
     os.environ["_condor_USE_PROCD"] = "False"
     os.environ["_condor_EXECUTE"] = ""
     os.environ["_condor_GRIDSHELL_DEBUG"] = "D_PID D_FULLDEBUG"
-    os.environ["PATH"] += ':'+ ChirpDir
 
     status_write_time = 0
     status_fname = os.path.join(FsBaseDir, "status")
