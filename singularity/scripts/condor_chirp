@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z ${_CONDOR_JOB_IWD} ];
+then 
+   echo Condor IWD not defined
+   exit 0
+fi
+
+echo $2 = $3 >> ${_CONDOR_JOB_IWD}/.chirp.ad

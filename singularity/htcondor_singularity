@@ -1,0 +1,5 @@
+Bootstrap: docker
+From: mapsacosta/split-starter:localcondor
+
+%startscript
+    /usr/local/bin/start_local_condor

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo ====== All files in place, cobalt job submitted. Starting local condor inside Singularity
+$(condor_config_val MASTER) -f
