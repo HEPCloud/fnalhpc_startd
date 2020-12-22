@@ -1,8 +1,9 @@
 #!/bin/bash
 
 echo Copying template
-# Launch a full stack CMS glidein on a set of THETA nodes
+# Launch a full stack glidein on a set of THETA nodes
 # Gathering parameters for the request
+
 THETA_USER=macosta
 NODE_CNT=1
 QUEUE=debug-cache-quad
