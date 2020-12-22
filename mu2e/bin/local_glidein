@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# Launch a full stack CMS glidein on a set of THETA nodes
+# Gathering parameters for the request
+THETA_USER=macosta
+NODE_CNT=1
+QUEUE=debug-cache-quad
+TIME="60"
+JOB_ID=${RANDOM}
+verbose='false'
+
+while getopts 'u:n:q:t:v:j:' flag; do
+  case "${flag}" in
+    u) THETA_USER="${OPTARG}" ;;
+    n) NODE_CNT="${OPTARG}" ;;
+    q) QUEUE="${OPTARG}" ;;
+    t) TIME="${OPTARG}" ;;
+    j) JOB_ID="${OPTARG}" ;;
+    v) verbose='true' ;;
+    *) echo "Usage: $0 -u [<THETA user>] -n [<node cnt>] [<THETA base directory>]" 1>&2 ; exit 1
+       ;;
+  esac
+done
+echo Routing job to ${QUEUE} queue
+
+SLOT_PREFIX="cobalt-mu2e-${JOB_ID}"
+GLIDEIN_NAME="cobalt-mu2e-${JOB_ID}@theta.alcf.anl.gov"
+THETA_BASE_DIR="/lus/theta-fs0/projects/Mu2e_HEPCloud/job_area/${SLOT_PREFIX}"
+THETA_BASE_DIR_SING="/projects/Mu2e_HEPCloud/job_area/${SLOT_PREFIX}"
+SOURCE="$(dirname "${PWD}")"
+EDGE_BASE_DIR=`pwd`
+
+echo "====== Starting split starter at ${HOSTNAME} under local Linux user $(whoami)"
+LNS=$(qstat -u ${THETA_USER} | wc -l)
+if [ $LNS -gt 2 ]
+then
+  echo "WARN: There are still COBALT jobs in the queue"
+  qstat -u ${THETA_USER}
+fi
+echo "====== Cleaning up previous files, you have 5 secs to abort ======"
+sleep 5
+./cleanup
+
+echo Using directory $THETA_BASE_DIR
+
+# Set up local Condor installation
+echo ====== Writing local files
+echo > here.info
+echo "${SLOT_PREFIX}" >> here.info
+cp -dR ${SOURCE}/skeleton/* .
+chmod 400 pool_password
+# This will ultimately go inside Singularity thus, the odd path
+echo LOCAL_DIR=${PWD} >>condor_config
+cat >config.d/97-personal2.conf <<EOF
+# Run-time settings for this personal condor setup
+#new startd name
+NUM_SLOTS_TYPE_1 = $NODE_CNT
+MASTER_NAME = $GLIDEIN_NAME   
+STARTD_NAME = $GLIDEIN_NAME
+STARTER_REMOTE_DIR = $THETA_BASE_DIR_SING/rendezvous
+THETA_VO = mu2e
+THETA_LOCAL_DIR = ${SOURCE}/edge_files 
+EOF
+
+# create sshfs connection
+echo ====== Creating base directory on shared storage
+mkdir ${THETA_BASE_DIR}
+echo ${THETA_BASE_DIR}
+
+# write theta files
+echo ====== Writing files on shared storage and writing job definition
+mkdir ${THETA_BASE_DIR}/rendezvous ${THETA_BASE_DIR}/log ${THETA_BASE_DIR}/execute
+cp -a ${SOURCE}/theta_files/* ${THETA_BASE_DIR}/
+cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
+#!/bin/bash
+
+# number of nodes
+#COBALT -n ${NODE_CNT}
+# wall time request, this is 30min
+#COBALT -t ${TIME}
+# one of the two debug queues, only difference is KNL cache settings
+#COBALT -q ${QUEUE}
+# project, this should work for the ALCC allocation
+#COBALT -A Mu2e_HEPCloud
+
+export PROJECT_DIR=/projects/Mu2e_HEPCloud
+export WORKINGDIR=~/HEPCloud_test
+echo "WORKINGDIR=$WORKINGDIR"
+export n_processes_per_node=1
+# Use Cray's Application Binary Independent MPI build
+ #module swap cray-mpich cray-mpich-abi
+# include CRAY_LD_LIBRARY_PATH in to the system library path
+export LD_LIBRARY_PATH=$CRAY_LD_LIBRARY_PATH:$LD_LIBRARY_PATH
+# also need this additional library
+export LD_LIBRARY_PATH=/opt/cray/wlm_detect/default/lib64/:$LD_LIBRARY_PATH
+# in order to pass environment variables to a Singularity container create the variable
+# with the SINGULARITYENV_ prefix
+export SINGULARITYENV_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+# print to log file for debug
+echo $SINGULARITYENV_LD_LIBRARY_PATH
+
+export MY_JOBID=${JOB_ID}
+# MPI launcher, 1 node, 1 MPI rank per node
+# basically starts mycommand on both nodes in the batch job
+aprun -n ${NODE_CNT} -N 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} ./mu2e_init_start.sh
+
+EOF
+
+chmod a+rx ${THETA_BASE_DIR}/job.cobalt
+
+echo ====== Files written
+
+echo ====== Submitting COBALT job 
+
+# Submit cobalt job
+cd ${THETA_BASE_DIR}; qsub -A Mu2e_HEPCloud -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
+
+
+cd ${EDGE_BASE_DIR}
+echo ====== No htcondor here so, Singularity ftw
+echo htcondor_${SLOT_PREFIX} >> here.info
+echo ${THETA_BASE_DIR} >> here.info
+
+singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/Mu2e_HEPCloud:/projects/Mu2e_HEPCloud --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/macosta:/home/macosta --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_thetaaa.sif htcondor_${SLOT_PREFIX}

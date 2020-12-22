@@ -1,2 +1,0 @@
-#!/bin/bash
-echo Chirp_$2 = $3 >>.chirp.ad

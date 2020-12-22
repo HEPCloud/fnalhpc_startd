@@ -1,0 +1,11 @@
+#!/bin/bash
+
+CHIRP_AD_LOCATION=`find . -type f -iname ".chirp.ad*"`
+JOB_OUT_AD_LOCATION=`find . -type f -iname ".job.ad.out*"`
+
+if [ -n $CHIRP_AD_LOCATION ]
+then 
+   cat ${CHIRP_AD_LOCATION} >> ${JOB_OUT_AD_LOCATION}
+fi 
+
+cat ${JOB_OUT_AD_LOCATION}
