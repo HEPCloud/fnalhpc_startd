@@ -68,7 +68,7 @@ def DoSendOutput(job_name):
     try:
         out_tar = tarfile.open(name=tmp_output_file, mode='w:gz')
         print("Invoking wrapup in this dir: " + full_execute_dir)
-        p = subprocess.Popen(["./wrapup_chirp.sh",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        p = subprocess.Popen(["./wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         stdout, stderr = p.communicate()
         print(stdout)
         print(stderr)

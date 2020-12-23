@@ -25,11 +25,12 @@ done
 echo ${QUEUE}
 
 JOB_ID=${RANDOM}
-DIRNAME="fnalhpc_startd_${JOB_ID}_${NODE_CNT}"
+DIRNAME="${VO}_${JOB_ID}_${NODE_CNT}"
 echo Creating local sandbox at ${DIRNAME}
 
-mkdir ~/glideins_${VO}/${DIRNAME}
-cp -r ~/templates/${VO}/* ~/glideins_${VO}/${DIRNAME}/
-cd ~/glideins_${VO}/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
+export QSTAT_HEADER="Queue:JobID:JobName:User:Nodes:RunTime:TimeRemaining:State:Project"
+mkdir -p glidein_requests/${DIRNAME}
+cp -r templates/${VO}/* glidein_requests/${DIRNAME}/
+cd glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
 
 
