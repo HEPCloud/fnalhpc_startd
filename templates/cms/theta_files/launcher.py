@@ -174,12 +174,12 @@ def main():
         print time.ctime()
         if time.time() >= status_write_time + 60:
             print "Writing status file at "+status_fname
-            fd = open(status_tmp_fname, "wb")
-            fd.write("WnTime=%d\n" % time.time())
-            fd.close()
             try:
+                fd = open(status_tmp_fname, "wb")
+                fd.write("WnTime=%d\n" % time.time())
+                fd.close()
                 os.rename(status_tmp_fname, status_fname)
-            except OSError as e:
+            except:
                 pass
             status_write_time = time.time()
         all_input_jobs = set()
