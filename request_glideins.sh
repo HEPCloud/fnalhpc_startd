@@ -1,6 +1,13 @@
 #!/bin/bash
 
-echo Copying template
+YL="\[\033[1;33m\]"
+WHT="\[\033[1;97m\]"
+CY="\[\033[1;36m\]"
+MGT="\[\033[1;35m\]"
+GR="\[\033[1;32m\]"
+NO_COLOR="\[\033[0m\]"
+
+echo -e "${GR} New glidein request ${NO_COLOR}"
 # Launch a full stack glidein on a set of THETA nodes
 # Gathering parameters for the request
 
@@ -25,12 +32,16 @@ done
 echo ${QUEUE}
 
 JOB_ID=${RANDOM}
-DIRNAME="${VO}_${JOB_ID}_${NODE_CNT}"
+DIRNAME="cobalt-${VO}-${JOB_ID}_local"
 echo Creating local sandbox at ${DIRNAME}
 
 export QSTAT_HEADER="Queue:JobID:JobName:User:Nodes:RunTime:TimeRemaining:State:Project"
 mkdir -p glidein_requests/${DIRNAME}
+echo -e Local directory created at glidein_requests/${DIRNAME}
 cp -r templates/${VO}/* glidein_requests/${DIRNAME}/
 cd glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
 
+echo -e "${GR} Done! listing queue: ${NO_COLOR}"
+qstat -u $THETA_USER
+cat glidein_requests/${DIRNAME}/bin/here.info
 
