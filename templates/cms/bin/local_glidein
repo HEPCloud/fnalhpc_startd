@@ -39,7 +39,7 @@ then
 fi
 echo "====== Cleaning up previous files, you have 5 secs to abort ======"
 sleep 5
-#./cleanup.sh
+./cleanup
 
 echo Using directory $THETA_BASE_DIR
 
@@ -87,7 +87,7 @@ cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
 export MY_JOBID=${JOB_ID}
 # MPI launcher, 1 node, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
-aprun -n ${NODE_CNT} -N 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} ./cms_init_start.sh
+aprun -n ${NODE_CNT} -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} ./cms_init_start.sh
 
 EOF
 
@@ -106,4 +106,4 @@ echo ====== No htcondor here so, Singularity ftw
 echo htcondor_${SLOT_PREFIX} >> here.info
 echo ${THETA_BASE_DIR} >> here.info
 
-singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/HighLumin:/projects/HighLumin --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/macosta:/home/macosta --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_thetaaa.sif htcondor_${SLOT_PREFIX}
+singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/HighLumin:/projects/HighLumin --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/${THETA_USER}:/home/${THETA_USER} --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_edge_svc.sif htcondor_${SLOT_PREFIX}
