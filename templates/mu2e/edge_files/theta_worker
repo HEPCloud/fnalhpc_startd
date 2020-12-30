@@ -8,27 +8,28 @@ function do_submit ()
   echo do_submit
   
   #echo "tar zvcf ${JOB_NAME}.tar.gz * .??*"
-  #pwd
-  #echo "this one is zipping this file ${JOB_NAME}.tar.gz"
+  echo "this one is zipping this file ${JOB_NAME}.tar.gz"
   tar zvcf ${JOB_NAME}.tar.gz * .??*
-  #ls -ltrha
   echo "JOB NAME? -> ${JOB_NAME}"
   echo "REMOTE DIR? -> ${REMOTE_DIR}"
   mv ${JOB_NAME}.tar.gz $REMOTE_DIR
   echo "Moving ${JOB_NAME}.tar.gz to ${REMOTE_DIR} -- Python script should grab it from here"
+  echo "${PWD##*/},${JOB_NAME},${REMOTE_DIR}" >> ../../job_data
 }
 
 function do_wait ()
 {
   echo do_wait
   while [[ -f ${REMOTE_DIR}/${JOB_NAME}.tar.gz && ! -f ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz ]] ; do
-    sleep 5
+    sleep 30
   done
 }
 
 function do_stageout ()
 {
-  echo do_stageout
+  echo do_stageout at 
+  pwd
+  echo 'tar xfv ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz'
   tar xfv ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz
   echo Staging out ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz
 }
