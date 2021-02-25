@@ -34,15 +34,14 @@ done
 
 JOB_ID=${RANDOM}
 DIRNAME="cobalt-${VO}-${JOB_ID}_local"
-echo "---> Creating local sandbox at ${DIRNAME}"
+echo -e "${BL}INFO:${NO_COLOR} Creating local sandbox at ${DIRNAME}"
 
 export QSTAT_HEADER="Queue:JobID:JobName:User:Nodes:RunTime:TimeRemaining:State:Project"
 mkdir -p ${REPO_HOME}/glidein_requests/${DIRNAME}
-echo -e "Local directory created at glidein_requests/${DIRNAME} ${YL}"
+echo -e "${BL}INFO: ${NO_COLOR}Local directory created at glidein_requests/${DIRNAME} ${YL}"
 cp -r ${REPO_HOME}/templates/${VO}/* ${REPO_HOME}/glidein_requests/${DIRNAME}/
 cd ${REPO_HOME}/glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
 
-echo -e "${GR}Done! listing queue, displaying job info ${NO_COLOR}"
-qstat -u $THETA_USER
+echo -e "${GR}Done!, displaying job info ${NO_COLOR}"
 cat here.info
 
