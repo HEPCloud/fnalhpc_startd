@@ -21,7 +21,7 @@ function do_wait ()
 {
   echo do_wait
   while [[ -f ${REMOTE_DIR}/${JOB_NAME}.tar.gz && ! -f ${REMOTE_DIR}/${JOB_NAME}.out.tar.gz ]] ; do
-    sleep 30
+    sleep 5
   done
 }
 

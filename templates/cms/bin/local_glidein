@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Terminal utils
+
 # Launch a full stack CMS glidein on a set of THETA nodes
 # Gathering parameters for the request
 THETA_USER=macosta
@@ -21,7 +23,7 @@ while getopts 'u:n:q:t:v:j:' flag; do
        ;;
   esac
 done
-echo Routing job to ${QUEUE} queue
+#echo Routing job to ${QUEUE} queue
 
 SLOT_PREFIX="cobalt-cms-${JOB_ID}"
 GLIDEIN_NAME="cobalt-cms-${JOB_ID}@theta.alcf.anl.gov"
@@ -34,18 +36,17 @@ echo "====== Starting split starter at ${HOSTNAME} under local Linux user $(whoa
 LNS=$(qstat -u ${THETA_USER} | wc -l)
 if [ $LNS -gt 2 ]
 then
-  echo "WARN: There are still COBALT jobs in the queue"
+  echo "WARN: There are COBALT jobs in the queue"
   qstat -u ${THETA_USER}
 fi
 echo "====== Cleaning up previous files, you have 5 secs to abort ======"
 sleep 5
-./cleanup
 
-echo Using directory $THETA_BASE_DIR
+echo INFO: Using directory $THETA_BASE_DIR
 
 # Set up local Condor installation
 echo ====== Writing local files
-echo > here.info
+echo -n > here.info
 echo "${SLOT_PREFIX}" >> here.info
 cp -dR ${SOURCE}/skeleton/* .
 chmod 400 pool_password
@@ -65,10 +66,9 @@ EOF
 # create sshfs connection
 echo ====== Creating base directory on shared storage
 mkdir ${THETA_BASE_DIR}
-echo ${THETA_BASE_DIR}
 
 # write theta files
-echo ====== Writing files on shared storage and writing job definition
+echo ====== Writing files for job submission
 mkdir ${THETA_BASE_DIR}/rendezvous ${THETA_BASE_DIR}/log ${THETA_BASE_DIR}/execute
 cp -a ${SOURCE}/theta_files/* ${THETA_BASE_DIR}/
 cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
@@ -83,7 +83,6 @@ cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
 # project, this should work for the ALCC allocation
 #COBALT -A HighLumin
 
-
 export MY_JOBID=${JOB_ID}
 # MPI launcher, 1 node, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
@@ -93,9 +92,9 @@ EOF
 
 chmod a+rx ${THETA_BASE_DIR}/job.cobalt
 
-echo ====== Files written
+echo INFO: Files written
 
-echo ====== Submitting COBALT job 
+echo INFO: Submitting COBALT job 
 
 # Submit cobalt job
 cd ${THETA_BASE_DIR}; qsub -A HighLumin -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt

@@ -1,13 +1,15 @@
 #!/bin/bash
 
-YL="\[\033[1;33m\]"
-WHT="\[\033[1;97m\]"
-CY="\[\033[1;36m\]"
-MGT="\[\033[1;35m\]"
-GR="\[\033[1;32m\]"
-NO_COLOR="\[\033[0m\]"
+BL="\033[1;34m"
+YL="\033[1;33m"
+WHT="\033[1;97m"
+CY="\033[1;36m"
+MGT="\033[1;35m"
+GR="\033[1;32m"
+NO_COLOR="\033[0m"
 
-echo -e "${GR} New glidein request ${NO_COLOR}"
+echo -e "${GR}====== New glidein request ======${NO_COLOR}"
+export REPO_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # Launch a full stack glidein on a set of THETA nodes
 # Gathering parameters for the request
 
@@ -29,19 +31,17 @@ while getopts 'u:n:q:t:v:' flag; do
        ;;
   esac
 done
-echo ${QUEUE}
 
 JOB_ID=${RANDOM}
 DIRNAME="cobalt-${VO}-${JOB_ID}_local"
-echo Creating local sandbox at ${DIRNAME}
+echo -e "${BL}INFO:${NO_COLOR} Creating local sandbox at ${DIRNAME}"
 
 export QSTAT_HEADER="Queue:JobID:JobName:User:Nodes:RunTime:TimeRemaining:State:Project"
-mkdir -p glidein_requests/${DIRNAME}
-echo -e Local directory created at glidein_requests/${DIRNAME}
-cp -r templates/${VO}/* glidein_requests/${DIRNAME}/
-cd glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
+mkdir -p ${REPO_HOME}/glidein_requests/${DIRNAME}
+echo -e "${BL}INFO: ${NO_COLOR}Local directory created at glidein_requests/${DIRNAME} ${YL}"
+cp -r ${REPO_HOME}/templates/${VO}/* ${REPO_HOME}/glidein_requests/${DIRNAME}/
+cd ${REPO_HOME}/glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${THETA_USER} -t ${TIME} -j ${JOB_ID}
 
-echo -e "${GR} Done! listing queue: ${NO_COLOR}"
-qstat -u $THETA_USER
-cat glidein_requests/${DIRNAME}/bin/here.info
+echo -e "${GR}Done!, displaying job info ${NO_COLOR}"
+cat here.info
 

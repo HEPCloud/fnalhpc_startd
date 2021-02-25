@@ -16,10 +16,11 @@ import traceback
 
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
+DoneDir = FsBaseDir + "/in_progress"
 #FsBaseDir = os.getenv('SHARED_DIR', WnBaseDir + "/rendezvous")
 ReleaseDir = "/usr"
-ExecuteDir = WnBaseDir + "/execute"
-ExecuteDir = os.getenv('EXEC_DIR', WnBaseDir + "/execute")
+#ExecuteDir = WnBaseDir + "/execute"
+ExecuteDir = os.getenv('EXEQ_DIR', WnBaseDir + "/execute")
 LogDir = os.getenv('LOG_DIR', WnBaseDir + "/log")
 #LogDir = WnBaseDir + "/log"
 
@@ -32,13 +33,18 @@ def DoSubmit( job_name ):
     if not os.path.isdir(full_execute_dir):
         try:
             os.mkdir(full_execute_dir, 0700)
-            #print "Created dir -> " + full_execute_dir
+            print "Created dir -> " + full_execute_dir
             in_tar = tarfile.open(full_input_file, 'r')
             in_tar.extractall(full_execute_dir)
             print "Extracted " + full_input_file + " at " + full_execute_dir
+          #  print "Removing "+ full_input_file +" to "+ os.path.join( DoneDir, "%s.tar.gz" % job_name )
+            #shutil.move( full_input_file, os.path.join( DoneDir, "%s.tar.gz" % job_name ))
             my_env = os.environ.copy()
-            my_env["PATH"] = "/usr/local/bin:/sbin:" + my_env["PATH"]
-    
+	    my_env["PATH"] = "/usr/local/bin:/sbin:" + my_env["PATH"]
+            my_env["_condor_X509_USER_PROXY"] = full_execute_dir + "/myproxy.pem"
+            my_env["X509_USER_PROXY_STAGEOUT"] = full_execute_dir + "/myproxy.pem"
+            os.environ["_condor_STARTER_JOB_ENVIRONMENT"] = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;X509_USER_PROXY_STAGEOUT="+full_execute_dir+"/myproxy.pem"
+
             starter_args = [ os.path.join( ReleaseDir, "sbin", "condor_starter" ),
                              "-gridshell",
                              "-job-input-ad",
@@ -160,6 +166,7 @@ def main():
 
     print("THIS IS -- wnbasedir" + WnBaseDir)
     print("THIS IS -- fsbasedir" + FsBaseDir)
+    print("THIS IS -- execdir" + ExecuteDir)
     status_write_time = 0
     status_fname = os.path.join(FsBaseDir, "status")
     status_tmp_fname = status_fname + ".tmp"
