@@ -22,7 +22,7 @@ function cleanup {
 # ------ This is the actual code ------- "
 BASE=${PWD}
 
-echo "==== Running CMS Starter script at "
+echo "==== Running Mu2E Starter script at "
 hostname
 
 echo "====== Cleaning up possible leftovers from previous jobs"
@@ -38,7 +38,7 @@ tar xzf /projects/Mu2e_HEPCloud/cvmfsexec_local_scratch.tgz
 
 {
     cd ${BASE}
-    SSD_SCRATCH="/local/scratch/uscms/${SLOT_PREFIX}"
+    SSD_SCRATCH="/local/scratch/mu2e/${SLOT_PREFIX}"
     mkdir -p ${SSD_SCRATCH}/log
     mkdir -p ${SSD_SCRATCH}/execute
     cp /lus/theta-fs0/projects/Mu2e_HEPCloud/shared_containers/mu2e_worker_chirp.sif /local/scratch/mu2e/${SLOT_PREFIX}/mu2e_worker_chirp.sif
