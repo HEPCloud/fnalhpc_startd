@@ -78,13 +78,6 @@ def DoSendOutput(job_name):
         stdout, stderr = p.communicate()
         print(stdout)
         print(stderr)
-        #output = p.stdout.read()
-        #print output
-#        subprocess.call("./wrapup_chirp", shell=True)
-#        wrap_up = subprocess.Popen(["./wrapup_chirp"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
- #       wrap_up.wait()
-#        os.system('pwd'
-#        os.system("cat .job.ad.out")
         # TODO skip files older than job start time?
         for job_file in os.listdir(full_execute_dir):
             #print(job_file)
@@ -138,9 +131,11 @@ def DoCleanUp( job_name ):
         job_dir = os.path.join(ExecuteDir, job_name)
         if os.access(job_dir, os.F_OK) == True:
             shutil.rmtree(job_dir)
+            print "Would've removed "+ job_dir
         output_file = os.path.join(ExecuteDir, "%s.out.tar.gz" % job_name)
         if os.access(output_file, os.F_OK) == True:
-            os.remove(output_file)
+           print "Not removing out.tgz due to the asynchronous nature of this setup"
+            #os.remove(output_file)
     except:
         print "Cleanup failed"
         print("Unexpected error:", sys.exc_info()[0])
