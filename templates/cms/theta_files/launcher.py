@@ -26,38 +26,32 @@ def DoSubmit( job_name ):
     print "Submit %s" % job_name
     full_input_file = os.path.join( FsBaseDir, "%s.tar.gz" % job_name )
     full_execute_dir = os.path.join( ExecuteDir, job_name )
-    if not os.path.isdir(full_execute_dir):
-        try:
-            os.mkdir(full_execute_dir, 0700)
-            print "Created dir -> " + full_execute_dir
-            in_tar = tarfile.open(full_input_file, 'r')
-            in_tar.extractall(full_execute_dir)
-            print "Extracted " + full_input_file + " at " + full_execute_dir
-            my_env = os.environ.copy()
-	    my_env["PATH"] = "/usr/local/bin:/sbin:" + my_env["PATH"]
-            my_env["_condor_X509_USER_PROXY"] = full_execute_dir + "/myproxy.pem"
-            my_env["X509_USER_PROXY_STAGEOUT"] = full_execute_dir + "/myproxy.pem"
-            os.environ["_condor_STARTER_JOB_ENVIRONMENT"] = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;X509_USER_PROXY_STAGEOUT="+full_execute_dir+"/myproxy.pem"
 
-            starter_args = [ os.path.join( ReleaseDir, "sbin", "condor_starter" ),
-                             "-gridshell",
-                             "-job-input-ad",
-                             os.path.join( full_execute_dir, ".job.ad" ),
-                             "-job-output-ad",
-                             os.path.join( full_execute_dir, ".job.ad.out" )
-                             ]
-            starter = subprocess.Popen(args = starter_args, cwd = full_execute_dir, env=my_env)
-            print "Started standalone condor starter"
-    
-            JobList[job_name] = starter
+    try:
+        os.mkdir(full_execute_dir, 0700)
+        in_tar = tarfile.open(full_input_file, 'r')
+        in_tar.extractall(full_execute_dir)
+        my_env = os.environ.copy()
+        my_env["PATH"] = "/usr/local/bin:/sbin:" + my_env["PATH"]
+        my_env["_condor_X509_USER_PROXY"] = full_execute_dir + "/myproxy.pem"
+        my_env["X509_USER_PROXY_STAGEOUT"] = full_execute_dir + "/myproxy.pem"
+        os.environ["_condor_STARTER_JOB_ENVIRONMENT"] = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;X509_USER_PROXY_STAGEOUT="+full_execute_dir+"/myproxy.pem"
+
+        starter_args = [ os.path.join( ReleaseDir, "sbin", "condor_starter" ),
+                         "-gridshell",
+                         "-job-input-ad",
+                         os.path.join( full_execute_dir, ".job.ad" ),
+                         "-job-output-ad",
+                         os.path.join( full_execute_dir, ".job.ad.out" )
+                         ]
+        starter = subprocess.Popen(args = starter_args, cwd = full_execute_dir, env=my_env)
+        print "Started standalone condor starter"
+        JobList[job_name] = starter
         except:
             print("Unexpected error:", sys.exc_info()[0])
             traceback.print_exc(file=sys.stdout)
             # TODO how to indicate failure to submitter
             return False
-    else:
-        print("Directory already exists")
-        return False 
     return True
 
 def DoSendOutput(job_name):
@@ -74,7 +68,6 @@ def DoSendOutput(job_name):
         print(stderr)
         # TODO skip files older than job start time?
         for job_file in os.listdir(full_execute_dir):
-            #print(job_file)
             out_tar.add(name=os.path.join(full_execute_dir,job_file),
                         arcname=job_file)
         out_tar.close()
@@ -112,16 +105,10 @@ def DoCleanUp( job_name ):
     try:
         if job_name in JobList:
             # TODO Add better error handling, including SIGKILL of starter after timeout
-            proc = JobList[job_name]
-            try:
-                os.kill(JobList[job_name], signal.SIGQUIT)
-                (pid, status) = os.waitpid(JobList[job_name], 0)
-                print "  waitpid(%d) returned %d, %d" % (JobList[job_name], pid, status)
-                del JobList[job_name]
-            except (OSError, TypeError) as e:
-                print("Probably not running on this node")
-                print e
-                pass
+            os.kill(JobList[job_name], signal.SIGQUIT)
+            (pid, status) = os.waitpid(JobList[job_name], 0)
+            print "  waitpid(%d) returned %d, %d" % (JobList[job_name], pid, status)
+            del JobList[job_name]
         job_dir = os.path.join(ExecuteDir, job_name)
         if os.access(job_dir, os.F_OK) == True:
             shutil.rmtree(job_dir)
@@ -150,17 +137,19 @@ def main():
     import platform
     print(platform.platform())
 
-    print("THIS IS -- wnbasedir" + WnBaseDir)
-    print("THIS IS -- fsbasedir" + FsBaseDir)
-    print("THIS IS -- execdir" + ExecuteDir)
+    print("Using -- wnbasedir" + WnBaseDir)
+    print("      -- fsbasedir" + FsBaseDir)
+    print("      -- execdir" + ExecuteDir)
     status_write_time = 0
     status_fname = os.path.join(FsBaseDir, "status")
     status_tmp_fname = status_fname + ".tmp"
 
+    job_name_prefix = ""
     node_name = platform.node()
-    node_id = node_name[node_name.index("nid") + len("nid"):]
-    job_name_prefix = "slot%d_" % (int(node_id))
-    print "Using job name prefix '%s'" % job_name_prefix
+    if node_name:
+        node_id = node_name[node_name.index("nid") + len("nid"):]
+        job_name_prefix = "slot%d_" % (int(node_id))
+        print "Using job name prefix '%s'" % job_name_prefix
 
     while True:
         print "*** Starting scan ***"
@@ -197,7 +186,7 @@ def main():
                 rc = DoSubmit(job_name)
 #                print " Submitted -> "+job_name+" now we wait"
                 if rc == False:
-                    print "Skipping, job is running"
+                    print "Submit failed"
         for removed_job in JobList.viewkeys() - all_input_jobs:
             print "  Job %s removed by submitter" % removed_job
             DoCleanUp(removed_job)
