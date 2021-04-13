@@ -11,18 +11,14 @@ import signal
 import tarfile
 import subprocess
 import traceback
-#import classad
-#import htcondor
 
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
 DoneDir = FsBaseDir + "/in_progress"
-#FsBaseDir = os.getenv('SHARED_DIR', WnBaseDir + "/rendezvous")
 ReleaseDir = "/usr"
 #ExecuteDir = WnBaseDir + "/execute"
 ExecuteDir = os.getenv('EXEQ_DIR', WnBaseDir + "/execute")
 LogDir = os.getenv('LOG_DIR', WnBaseDir + "/log")
-#LogDir = WnBaseDir + "/log"
 
 JobList = {}
 
@@ -37,8 +33,6 @@ def DoSubmit( job_name ):
             in_tar = tarfile.open(full_input_file, 'r')
             in_tar.extractall(full_execute_dir)
             print "Extracted " + full_input_file + " at " + full_execute_dir
-          #  print "Removing "+ full_input_file +" to "+ os.path.join( DoneDir, "%s.tar.gz" % job_name )
-            #shutil.move( full_input_file, os.path.join( DoneDir, "%s.tar.gz" % job_name ))
             my_env = os.environ.copy()
 	    my_env["PATH"] = "/usr/local/bin:/sbin:" + my_env["PATH"]
             my_env["_condor_X509_USER_PROXY"] = full_execute_dir + "/myproxy.pem"
@@ -131,11 +125,9 @@ def DoCleanUp( job_name ):
         job_dir = os.path.join(ExecuteDir, job_name)
         if os.access(job_dir, os.F_OK) == True:
             shutil.rmtree(job_dir)
-            print "Would've removed "+ job_dir
         output_file = os.path.join(ExecuteDir, "%s.out.tar.gz" % job_name)
         if os.access(output_file, os.F_OK) == True:
-           print "Not removing out.tgz due to the asynchronous nature of this setup"
-            #os.remove(output_file)
+            os.remove(output_file)
     except:
         print "Cleanup failed"
         print("Unexpected error:", sys.exc_info()[0])
@@ -156,7 +148,6 @@ def main():
     os.environ["_condor_GRIDSHELL_DEBUG"] = "D_PID D_FULLDEBUG"
 
     import platform
-    print(platform.node())
     print(platform.platform())
 
     print("THIS IS -- wnbasedir" + WnBaseDir)
@@ -165,12 +156,12 @@ def main():
     status_write_time = 0
     status_fname = os.path.join(FsBaseDir, "status")
     status_tmp_fname = status_fname + ".tmp"
- #   print("STATUS TEMP FNAME??"+status_tmp_fname)
 
-    job_name_prefix = ""
-    if "COBALT_JOBID" in os.environ:
-        job_name_prefix = "slot%d_" % (int(os.environ["COBALT_JOBID"]) + 1)
-  #      print "Using job name prefix '%s'" % job_name_prefix
+    node_name = platform.node()
+    node_id = node_name[node_name.index("nid") + len("nid"):]
+    job_name_prefix = "slot%d_" % (int(node_id))
+    print "Using job name prefix '%s'" % job_name_prefix
+
     while True:
         print "*** Starting scan ***"
         print time.ctime()
@@ -187,8 +178,7 @@ def main():
         all_input_jobs = set()
         for input_file in os.listdir(FsBaseDir):
             print "Processing... " + input_file
-    #        print "Matching input file ->" + input_file + " with regexp to job name prefix" + job_name_prefix + ".tgz"
-            m = re.match("([^.]+)\.tar\.gz$", input_file)
+            m = re.match("(%s[^.]+)\.tar\.gz$" % job_name_prefix, input_file)
             if m == None:
                 print("Skipping")
                 continue
