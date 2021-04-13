@@ -47,11 +47,11 @@ def DoSubmit( job_name ):
         starter = subprocess.Popen(args = starter_args, cwd = full_execute_dir, env=my_env)
         print "Started standalone condor starter"
         JobList[job_name] = starter
-        except:
-            print("Unexpected error:", sys.exc_info()[0])
-            traceback.print_exc(file=sys.stdout)
-            # TODO how to indicate failure to submitter
-            return False
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+        traceback.print_exc(file=sys.stdout)
+        # TODO how to indicate failure to submitter
+        return False
     return True
 
 def DoSendOutput(job_name):
