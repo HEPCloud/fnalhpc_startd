@@ -141,6 +141,7 @@ def main():
     os.environ["_condor_STARTER_JOB_ENVIRONMENT"] = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     os.environ["_condor_GRIDSHELL_DEBUG"] = "D_PID D_FULLDEBUG"
 
+    from datetime import datetime
     import platform
     print(platform.platform())
 
@@ -154,18 +155,16 @@ def main():
     status_tmp_fname = status_fname + ".tmp"
 
     job_name_prefix = ""
-    node_name = platform.node()
+    node_name = " - "+platform.node() + " (" + os.environ["COBALT_NODEID"]+") - "
     if os.environ["COBALT_NODEID"]:
         job_name_prefix = "slot%d_" % (int(os.environ["COBALT_NODEID"]))
-        print node_name+" Using job name prefix '%s'" % job_name_prefix
-#        node_id = node_name[node_name.index("nid") + len("nid"):]
-#        job_name_prefix = "slot%d_" % (int(node_id))
+        print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Using job name prefix '%s'" % job_name_prefix
 
     while True:
-        print node_name + " *** Starting scan ***"
+        print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" *** Starting scan ***"
         print time.ctime()
         if time.time() >= status_write_time + 60:
-            print node_name + " Writing status file at "+status_fname
+            print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name + " Writing status file at "+status_fname
             try:
                 fd = open(status_tmp_fname, "wb")
                 fd.write("WnTime=%d\n" % time.time())
@@ -176,29 +175,27 @@ def main():
             status_write_time = time.time()
         all_input_jobs = set()
         for input_file in os.listdir(FsBaseDir):
-            print node_name + " Processing... " + input_file
+            print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name + " Processing... " + input_file
             m = re.match("(%s[^.]+)\.tar\.gz$" % job_name_prefix, input_file)
-            pprint.pprint(m)
             if m == None:
-                print(node_name+" Skipping")
                 continue
             job_name = m.group(1)
-            print(node_name+" Got a job at "+ node_name+ " -> job name "+job_name)
+            print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Got a job at "+ node_name+ " -> job name "+job_name)
             input_file = os.path.join(FsBaseDir, "%s.tar.gz" % job_name)
             output_file = os.path.join(FsBaseDir, "%s.out.tar.gz" % job_name)
             if os.access(output_file, os.F_OK) == True:
-                print(node_name+" We finished this job, ignore it")
+                print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" We finished this job, ignore it")
                 # We finished this job, ignore it
                 continue
             all_input_jobs.add(job_name)
             if job_name not in JobList:
-                print node_name+"  Need to submit"
+                print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Submitting "+job_name
                 rc = DoSubmit(job_name)
 #                print " Submitted -> "+job_name+" now we wait"
                 if rc == False:
-                    print node_name+" Submit failed"
+                    print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Submit failed"
         for removed_job in JobList.viewkeys() - all_input_jobs:
-            print node_name+"  Job %s removed by submitter" % removed_job
+            print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+"  Job %s removed by submitter" % removed_job
             DoCleanUp(removed_job)
 
         DoStatusCheck()

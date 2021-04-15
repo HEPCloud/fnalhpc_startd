@@ -7,8 +7,11 @@ From: cmssw/cms:rhel7
 %post
     groupadd -g 10737 HighLumin
     groupadd -g 10815 Mu2e_HEPCloud
+    groupadd -g 10505 HEPCloud-FNAL
     useradd -g HighLumin -G users,Mu2e_HEPCloud -u 35068 macosta
+    useradd -g HighLumin -G users,Mu2e_HEPCloud,HEPCloud-FNAL -u 34010 hufnagel
     chown -R macosta: /home/macosta
+    chown -R hufnagel: /home/hufnagel
     cd /etc/yum.repos.d
     wget http://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-development-rhel7.repo
     wget http://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor

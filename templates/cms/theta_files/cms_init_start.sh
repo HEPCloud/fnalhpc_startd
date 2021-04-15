@@ -18,32 +18,30 @@ function cleanup {
     rm -rfd /tmp/cvmfsexec >& /dev/null
     rm -rfd /local/scratch/uscms >& /dev/null
     sleep 5
-    echo Done with cleanup
 }
+
+timestamp="$(date +%d-%m-%Y_%H-%M-%S) - $(hostname) ($COBALT_NODEID) - "
 
 # ------- Done -------#
 
 # ------ This is the actual code ------- "
 BASE=${PWD}
 
-echo "==== Running CMS Starter script at "
-hostname
+echo "$timestamp Running CMS Starter "
 
-echo "====== Cleaning up possible leftovers from previous jobs"
+echo "$timestamp Cleaning up possible leftovers from previous jobs"
 cleanup
-sleep 5
 
-
-echo "====== Deploying and starting local squid"
+echo "$timestamp Deploying and starting local squid"
 mkdir -p /local/scratch/uscms/
 cd /local/scratch/uscms/
 tar xzf /projects/HighLumin/uscms/frontier-cache_local_scratch.tgz
 /local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start
 
-echo "====== Setting relevant environment variables"
+echo "$timestamp Setting relevant environment variables"
 export CMS_LOCAL_SITE=T3_US_ANL
 
-echo "====== Configuring CVMFS, if successful, start HTCondor"
+echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
 mkdir -p /local/scratch/uscms/${SLOT_PREFIX}/cvmfs-cache
 cd /local/scratch/uscms/${SLOT_PREFIX}
 tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
@@ -56,16 +54,16 @@ tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
     cp /lus/theta-fs0/projects/HighLumin/shared_containers/cms_worker_chirp_1_12.sif ${SSD_SCRATCH}/cms_worker_chirp_1_12.sif
     EXEC_DIR=${SSD_SCRATCH}/execute
     LOG_DIR=${SSD_SCRATCH}/log
-    echo "Launching CVMFSexec and split starter launcher inside Singularity"
+    echo "$timestamp Launching CVMFSexec and split starter launcher inside Singularity"
     /local/scratch/uscms/${SLOT_PREFIX}/cvmfsexec/cvmfsexec config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "SINGULARITYENV_PATH=/usr/bin:/usr/local/bin:/sbin /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec --env CONDOR_CHIRP=/usr/local/bin/condor_chirp --env LOG_DIR=${LOG_DIR} --env EXEC_DIR=${EXEC_DIR} --bind /etc/hosts --bind /projects/HighLumin --bind /cvmfs --bind ${SSD_SCRATCH} --home ${BASE} /local/scratch/uscms/${SLOT_PREFIX}/cms_worker_chirp_1_12.sif ./launcher.py"
 } || 
 {
-    echo "===== Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
+    echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
     /local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
     cleanup
     exit 1
 }
 
-echo "===== When Startd exits, stop local squid and cleanup"
+echo "$timestamp Startd exiting, stopping local squid and cleaning up"
 /local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
 cleanup

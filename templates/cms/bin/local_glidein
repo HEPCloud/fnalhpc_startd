@@ -93,11 +93,10 @@ EOF
 for ((i=1;i<=${NODE_CNT};i++)); do
     echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
-    echo $i
 done
 
 echo "wait" >> ${THETA_BASE_DIR}/job.cobalt
-cat ${THETA_BASE_DIR}/job.cobalt
+#cat ${THETA_BASE_DIR}/job.cobalt
 
 chmod a+rx ${THETA_BASE_DIR}/job.cobalt
 
