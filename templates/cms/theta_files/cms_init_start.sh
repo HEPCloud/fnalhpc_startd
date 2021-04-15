@@ -36,7 +36,7 @@ echo "$timestamp Deploying and starting local squid"
 mkdir -p /local/scratch/uscms/
 cd /local/scratch/uscms/
 tar xzf /projects/HighLumin/uscms/frontier-cache_local_scratch.tgz
-/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start
+/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start > /dev/null 2>&1
 
 echo "$timestamp Setting relevant environment variables"
 export CMS_LOCAL_SITE=T3_US_ANL
