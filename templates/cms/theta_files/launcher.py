@@ -11,6 +11,7 @@ import signal
 import tarfile
 import subprocess
 import traceback
+import pprint
 
 WnBaseDir = os.getcwd()
 FsBaseDir = WnBaseDir + "/rendezvous"
@@ -104,11 +105,17 @@ def DoCleanUp( job_name ):
     print "DoCleanUp %s" % job_name
     try:
         if job_name in JobList:
+            proc = JobList[job_name]
+            try:
+                os.kill(JobList[job_name], signal.SIGQUIT)
+                (pid, status) = os.waitpid(JobList[job_name], 0)
+                print "  waitpid(%d) returned %d, %d" % (JobList[job_name], pid, status)
+                del JobList[job_name]
+            except (OSError, TypeError) as e:
+                print("Probably not running on this node")
+                print e
+                pass
             # TODO Add better error handling, including SIGKILL of starter after timeout
-            os.kill(JobList[job_name], signal.SIGQUIT)
-            (pid, status) = os.waitpid(JobList[job_name], 0)
-            print "  waitpid(%d) returned %d, %d" % (JobList[job_name], pid, status)
-            del JobList[job_name]
         job_dir = os.path.join(ExecuteDir, job_name)
         if os.access(job_dir, os.F_OK) == True:
             shutil.rmtree(job_dir)
@@ -137,25 +144,28 @@ def main():
     import platform
     print(platform.platform())
 
-    print("Using -- wnbasedir" + WnBaseDir)
-    print("      -- fsbasedir" + FsBaseDir)
-    print("      -- execdir" + ExecuteDir)
+    print(platform.node() + " Using -- wnbasedir" + WnBaseDir)
+    print(platform.node() + "      -- fsbasedir" + FsBaseDir)
+    print(platform.node() + "      -- execdir" + ExecuteDir)
+    print(platform.node() + "      -- My node ID = " + os.environ["COBALT_NODEID"])
+    print(platform.node() + "      -- My slot ID = " + os.environ["SLOT_PREFIX"])
     status_write_time = 0
     status_fname = os.path.join(FsBaseDir, "status")
     status_tmp_fname = status_fname + ".tmp"
 
     job_name_prefix = ""
     node_name = platform.node()
-    if node_name:
-        node_id = node_name[node_name.index("nid") + len("nid"):]
-        job_name_prefix = "slot%d_" % (int(node_id))
-        print "Using job name prefix '%s'" % job_name_prefix
+    if os.environ["COBALT_NODEID"]:
+        job_name_prefix = "slot%d_" % (int(os.environ["COBALT_NODEID"]))
+        print node_name+" Using job name prefix '%s'" % job_name_prefix
+#        node_id = node_name[node_name.index("nid") + len("nid"):]
+#        job_name_prefix = "slot%d_" % (int(node_id))
 
     while True:
-        print "*** Starting scan ***"
+        print node_name + " *** Starting scan ***"
         print time.ctime()
         if time.time() >= status_write_time + 60:
-            print "Writing status file at "+status_fname
+            print node_name + " Writing status file at "+status_fname
             try:
                 fd = open(status_tmp_fname, "wb")
                 fd.write("WnTime=%d\n" % time.time())
@@ -166,29 +176,29 @@ def main():
             status_write_time = time.time()
         all_input_jobs = set()
         for input_file in os.listdir(FsBaseDir):
-            print "Processing... " + input_file
+            print node_name + " Processing... " + input_file
             m = re.match("(%s[^.]+)\.tar\.gz$" % job_name_prefix, input_file)
+            pprint.pprint(m)
             if m == None:
-                print("Skipping")
+                print(node_name+" Skipping")
                 continue
             job_name = m.group(1)
+            print(node_name+" Got a job at "+ node_name+ " -> job name "+job_name)
             input_file = os.path.join(FsBaseDir, "%s.tar.gz" % job_name)
             output_file = os.path.join(FsBaseDir, "%s.out.tar.gz" % job_name)
             if os.access(output_file, os.F_OK) == True:
-                print("We finished this job, ignore it")
-                print(job_name)
-                print(output_file)
+                print(node_name+" We finished this job, ignore it")
                 # We finished this job, ignore it
                 continue
             all_input_jobs.add(job_name)
             if job_name not in JobList:
-                print "  Need to submit"
+                print node_name+"  Need to submit"
                 rc = DoSubmit(job_name)
 #                print " Submitted -> "+job_name+" now we wait"
                 if rc == False:
-                    print "Submit failed"
+                    print node_name+" Submit failed"
         for removed_job in JobList.viewkeys() - all_input_jobs:
-            print "  Job %s removed by submitter" % removed_job
+            print node_name+"  Job %s removed by submitter" % removed_job
             DoCleanUp(removed_job)
 
         DoStatusCheck()
