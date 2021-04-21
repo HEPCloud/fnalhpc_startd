@@ -21,7 +21,6 @@ while getopts 'u:n:q:t:v:j:' flag; do
        ;;
   esac
 done
-echo Routing job to ${QUEUE} queue
 
 SLOT_PREFIX="cobalt-mu2e-${JOB_ID}"
 GLIDEIN_NAME="cobalt-mu2e-${JOB_ID}@theta.alcf.anl.gov"
@@ -37,9 +36,6 @@ then
   echo "WARN: There are COBALT jobs in the queue"
   qstat -u ${THETA_USER}
 fi
-echo "====== Cleaning up previous files, you have 5 secs to abort ======"
-sleep 5
-./cleanup
 
 echo INFO: Using directory $THETA_BASE_DIR
 
@@ -101,9 +97,15 @@ echo $SINGULARITYENV_LD_LIBRARY_PATH
 export MY_JOBID=${JOB_ID}
 # MPI launcher, 1 node, 1 MPI rank per node
 # basically starts mycommand on both nodes in the batch job
-aprun -n ${NODE_CNT} -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} ./mu2e_init_start.sh
-
 EOF
+
+# Next
+for ((i=1;i<=${NODE_CNT};i++)); do
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
+    echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
+done
+
+echo "wait" >> ${THETA_BASE_DIR}/job.cobalt
 
 chmod a+rx ${THETA_BASE_DIR}/job.cobalt
 
