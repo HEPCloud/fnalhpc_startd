@@ -99,6 +99,8 @@ fi
 }
 
 echo "$timestamp Cleaning up stale Singularity containers (if any) ..."
+qstat -u macosta
+
 comm -3  <(singularity instance list | awk '{print $1}'| awk -F '_' '{print $2}'| sort) <(qstat -u macosta | awk '{print $3}'| sort) | grep cobalt | xargs -I cont singularity instance stop htcondor_cont
 
 poll_cms

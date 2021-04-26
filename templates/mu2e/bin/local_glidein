@@ -122,4 +122,4 @@ echo ====== No htcondor here so, Singularity ftw
 echo htcondor_${SLOT_PREFIX} >> here.info
 echo ${THETA_BASE_DIR} >> here.info
 
-singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/Mu2e_HEPCloud:/projects/Mu2e_HEPCloud --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/${THETA_USER}:/home/${THETA_USER} --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_edge_svc.sif htcondor_${SLOT_PREFIX}
+singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/Mu2e_HEPCloud:/projects/Mu2e_HEPCloud --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/${THETA_USER}:/home/${THETA_USER} --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_edge_9_0_0.sif htcondor_${SLOT_PREFIX}

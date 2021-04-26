@@ -65,9 +65,21 @@ def DoSendOutput( job_name, node_name ):
     try:
         out_tar = tarfile.open(name=tmp_output_file, mode='w:gz')
         print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Invoking wrapup in this dir: " + full_execute_dir)
+
+        # FINIShH UP with CMS monitoring knobs
+        additional_attrs = """MATCH_EXP_JOB_GLIDEIN_CMSSite = "T3_US_ANL"
+GLIDEIN_CMSSite = "T3_US_ANL"
+GLIDEIN_ResourceName = "ANL-Theta"
+GLIDEIN_Site = "ANL-Theta"
+"""
+
+        with open(full_execute_dir+"/.chirp.ad","w+") as f:
+            print(f.read())
+            f.writelines(additional_attrs)
+
         p = subprocess.Popen(["./wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         stdout, stderr = p.communicate()
-        # TODO skip files older than job start time?
+
         for job_file in os.listdir(full_execute_dir):
             out_tar.add(name=os.path.join(full_execute_dir,job_file),
                         arcname=job_file)

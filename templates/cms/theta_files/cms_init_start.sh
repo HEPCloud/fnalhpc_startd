@@ -51,11 +51,11 @@ tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
     SSD_SCRATCH="/local/scratch/uscms/${SLOT_PREFIX}"
     mkdir -p ${SSD_SCRATCH}/log
     mkdir -p ${SSD_SCRATCH}/execute
-    cp /lus/theta-fs0/projects/HighLumin/shared_containers/cms_worker_chirp_1_12.sif ${SSD_SCRATCH}/cms_worker_chirp_1_12.sif
+    cp /lus/theta-fs0/projects/HighLumin/shared_containers/cms_worker_8_9_13.sif ${SSD_SCRATCH}/cms_worker_8_9_13.sif
     EXEC_DIR=${SSD_SCRATCH}/execute
     LOG_DIR=${SSD_SCRATCH}/log
     echo "$timestamp Launching CVMFSexec and split starter launcher inside Singularity"
-    /local/scratch/uscms/${SLOT_PREFIX}/cvmfsexec/cvmfsexec config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "SINGULARITYENV_PATH=/usr/bin:/usr/local/bin:/sbin /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec --env CONDOR_CHIRP=/usr/local/bin/condor_chirp --env LOG_DIR=${LOG_DIR} --env EXEC_DIR=${EXEC_DIR} --bind /etc/hosts --bind /projects/HighLumin --bind /cvmfs --bind ${SSD_SCRATCH} --home ${BASE} /local/scratch/uscms/${SLOT_PREFIX}/cms_worker_chirp_1_12.sif ./launcher.py"
+    /local/scratch/uscms/${SLOT_PREFIX}/cvmfsexec/cvmfsexec config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "SINGULARITYENV_PATH=/usr/bin:/usr/local/bin:/sbin /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec --env CONDOR_CHIRP=/usr/local/bin/condor_chirp --env LOG_DIR=${LOG_DIR} --env EXEC_DIR=${EXEC_DIR} --bind /etc/hosts --bind /projects/HighLumin --bind /cvmfs --bind ${SSD_SCRATCH} --home ${BASE} /local/scratch/uscms/${SLOT_PREFIX}/cms_worker_8_9_13.sif ./launcher.py"
 } || 
 {
     echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
