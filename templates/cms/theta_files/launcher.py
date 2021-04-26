@@ -74,7 +74,6 @@ GLIDEIN_Site = "ANL-Theta"
 """
 
         with open(full_execute_dir+"/.chirp.ad","w+") as f:
-            print(f.read())
             f.writelines(additional_attrs)
 
         p = subprocess.Popen(["./wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
