@@ -65,19 +65,7 @@ def DoSendOutput( job_name, node_name ):
     try:
         out_tar = tarfile.open(name=tmp_output_file, mode='w:gz')
         print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Invoking wrapup in this dir: " + full_execute_dir)
-
-        # Finish with CMS monitoring knobs
- #       additional_attrs = ['MATCH_EXP_JOB_GLIDEIN_CMSSite = "T3_US_ANL"','GLIDEIN_CMSSite = "T3_US_ANL"','GLIDEIN_ResourceName = "ANL-Theta"','GLIDEIN_Site = "ANL-Theta"','']
- #       append_multiple_lines(full_execute_dir+'/.chirp.ad', additional_attrs)
         p = subprocess.Popen(["./wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-
-#        count = 0
-#        with open(full_execute_dir+'/.job.ad.out') as fp:
-#            print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Verify job.ad.out")
-#            for line in fp:
-#                count += 1
-#                print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" L"+str(count)+" "+line.strip())
-
         for job_file in os.listdir(full_execute_dir):
             out_tar.add(name=os.path.join(full_execute_dir,job_file),
                         arcname=job_file)
@@ -109,28 +97,6 @@ def DoStatusCheck(node_name):
         return False
     print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" StatusCheck succeeded"
     return True
-
-def append_multiple_lines(file_name, lines_to_append):
-    # Open the file in append & read mode ('a+')
-    with open(file_name, "a+") as file_object:
-        appendEOL = False
-        # Move read cursor to the start of file.
-        file_object.seek(0)
-        # Check if file is not empty
-        data = file_object.read(100)
-        if len(data) > 0:
-            appendEOL = True
-        # Iterate over each string in the list
-        for line in lines_to_append:
-            # If file is not empty then append '\n' before first line for
-            # other lines always append '\n' before appending line
-            if appendEOL == True:
-                file_object.write("\n")
-            else:
-                appendEOL = True
-            # Append element at the end of file
-            print"Writing line "+line
-            file_object.write(line)
 
 def DoCleanUp( job_name, node_name ):
     print datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Cleaning up %s" % job_name
