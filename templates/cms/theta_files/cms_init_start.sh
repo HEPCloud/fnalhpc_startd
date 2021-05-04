@@ -51,7 +51,7 @@ tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
     SSD_SCRATCH="/local/scratch/uscms/${SLOT_PREFIX}"
     mkdir -p ${SSD_SCRATCH}/log
     mkdir -p ${SSD_SCRATCH}/execute
-    cp /lus/theta-fs0/projects/HighLumin/shared_containers/cms_worker_8_9_13.sif ${SSD_SCRATCH}/cms_worker_8_9_13.sif
+    cp /lus/grand/projects/HighLumin/shared_containers/cms_worker_8_9_13.sif ${SSD_SCRATCH}/cms_worker_8_9_13.sif
     EXEC_DIR=${SSD_SCRATCH}/execute
     LOG_DIR=${SSD_SCRATCH}/log
     echo "$timestamp Launching CVMFSexec and split starter launcher inside Singularity"

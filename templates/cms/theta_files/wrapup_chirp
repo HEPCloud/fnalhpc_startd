@@ -1,11 +1,3 @@
 #!/bin/bash
 
-cd $1 && find . -iname '.chirp.ad*' -exec cat "{}" >> "./.job.ad.out" \; 
-cd $1 && echo 'GLIDEIN_CMSSite="T3_US_ANL"' >> ./.job.ad.out 
-#CHIRP_AD_LOCATION=`find . -type f -iname ".chirp.ad*"`
-
-#if [ -n $CHIRP_AD_LOCATION ]
-#then 
-echo Done appending chirp
-cat "$1/.job.ad.out"
-#fi 
+cd $1 && find ./ -type f -iname '*.chirp.ad*' -exec cat "{}" >> "./.job.ad.out" \;
