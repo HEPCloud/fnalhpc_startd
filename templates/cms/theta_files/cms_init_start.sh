@@ -60,6 +60,7 @@ tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
 {
     echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
     /local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
+    rm -rf ${SSD_SCRATCH}
     cleanup
     exit 1
 }
