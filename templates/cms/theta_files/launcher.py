@@ -21,7 +21,7 @@ FsBaseDir = WnBaseDir + "/rendezvous"
 DoneDir = FsBaseDir + "/in_progress"
 ReleaseDir = "/usr"
 #ExecuteDir = WnBaseDir + "/execute"
-ExecuteDir = os.getenv('EXEQ_DIR', WnBaseDir + "/execute")
+ExecuteDir = os.getenv('EXEC_DIR', WnBaseDir + "/execute")
 LogDir = os.getenv('LOG_DIR', WnBaseDir + "/log")
 
 JobList = {}
@@ -66,17 +66,7 @@ def DoSendOutput( job_name, node_name ):
         out_tar = tarfile.open(name=tmp_output_file, mode='w:gz')
         print(datetime.now().strftime("%d-%m-%Y_%H-%M-%S")+node_name+" Invoking wrapup in this dir: " + full_execute_dir)
 
-        # FINIShH UP with CMS monitoring knobs
-        additional_attrs = """MATCH_EXP_JOB_GLIDEIN_CMSSite = "T3_US_ANL"
-GLIDEIN_CMSSite = "T3_US_ANL"
-GLIDEIN_ResourceName = "ANL-Theta"
-GLIDEIN_Site = "ANL-Theta"
-"""
-
-        with open(full_execute_dir+"/.chirp.ad","w+") as f:
-            f.writelines(additional_attrs)
-
-        p = subprocess.Popen(["./wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        p = subprocess.Popen([WnBaseDir+"/wrapup_chirp",full_execute_dir], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         stdout, stderr = p.communicate()
 
         for job_file in os.listdir(full_execute_dir):
@@ -212,4 +202,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

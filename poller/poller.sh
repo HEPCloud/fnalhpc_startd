@@ -30,24 +30,33 @@ echo "$timestamp $TOTAL_CORES total cores"
 N_CORES=64
 N_MEM=192000
 
-TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
-TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
+#TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
+TOT=`echo "scale=2 ; $TOTAL_CORES / 8" | bc`
+#TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
+TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 2)
 
 echo "$timestamp We need $TOT nodes to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED)"
 QUEUE_SIZE=$(if [ -z $(qstat -u macosta | grep cms | awk '{s+=$5} END {print s}') ]; then echo 0 ; else qstat -u macosta | grep cms | awk '{s+=$5} END {print s}' ; fi)
+
+QUEUED_JOBCOUNT=$(qstat -u macosta | grep default | wc -l)
 
 echo "$timestamp There are $QUEUE_SIZE nodes provisioned in the queue"
 
 if [ $TOT_ROUNDED -lt $QUEUE_SIZE ] ; then
    echo "$timestamp We have enough, not requesting more"
    return 0
+elif [[ $QUEUED_JOBCOUNT -eq 20 ]]; then
+  echo "$timestamp We have reached the queue limit, not requesting more"
+  return 0
 else
   echo "$timestamp Need to submit COBALT jobs"
   NJOBS=$(ceiling_divide $TOT_ROUNDED 256)
-  echo "$timestamp Submitting $NJOBS jobs"
-  for i in $( seq 1 $NJOBS ); 
-     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms; 
-  done
+  echo "$timestamp Submitting a single COBALT job"
+  /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms
+#  echo "$timestamp Submitting $NJOBS jobs"
+#  for i in $( seq 1 $NJOBS ); 
+#     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms; 
+#  done
   return 0
 fi
 }
@@ -58,29 +67,31 @@ poll_mu2e(){
 
 echo "$timestamp Polling for Mu2e ..."
 
-singularity exec --bind ${PWD} --env CONDOR_CONFIG=./condor_config ~/fnalhpc_startd/templates/cms/containers/htcondor_edge_svc.sif condor_q -nobatch -pool cmssrv218.fnal.gov -name hepcjobsub01.fnal.gov -const 'Jobsub_Group=?="mu2e" && THETAJob==true' -idle -af RequestCpus RequestMemory > queue.current
+singularity exec --bind ${PWD} --env CONDOR_CONFIG=./condor_config ~/fnalhpc_startd/templates/mu2e/containers/htcondor_edge_svc.sif condor_q -name hepcjobsub01.fnal.gov -allusers -nobatch -const 'Jobsub_Group=?="mu2e" && THETAJob==true && JobStatus == 1' -af RequestCpus RequestMemory > ./queue.current
 
 TOTAL_JOBS=`cat ./queue.current | wc -l`
 
 if [ $TOTAL_JOBS -eq 0 ] ; then
-  echo "$timestamp No Mu2e jobs in queue for Theta"
-  return 0
+  echo "$timestamp No Mu2E jobs in queue for Theta"
+  exit 0
 fi
 
 TOTAL_CORES=`awk '{s+=$1}END{print s}' queue.current`
 TOTAL_MEM=`awk '{s+=$2}END{print s}' queue.current`
 
-echo "$timestamp $TOTAL_JOBS Mu2e jobs in queue for Theta"
+echo "$timestamp $TOTAL_JOBS MU2E jobs in queue for Theta"
 echo "$timestamp $TOTAL_CORES total cores"
 
 N_CORES=64
 N_MEM=192000
 
-TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
-TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
+#TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
+TOT=`echo "scale=2 ; $TOTAL_CORES / 8" | bc`
+#TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
+TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 2)
 
 echo "$timestamp We need $TOT nodes to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED)"
-QUEUE_SIZE=$(if [ -z $(qstat -u macosta | grep mu2e | awk '{s+=$5} END {print s}') ]; then echo 0 ; else qstat -u macosta | grep mu2e | awk '{s+=$5} END {print s}' ; fi)
+QUEUE_SIZE=$(if [ -z $(qstat -u macosta | grep mu2e | awk '{s+=$5} END {print s}') ]; then echo 0 ; else qstat -u macosta | grep cms | awk '{s+=$5} END {print s}' ; fi)
 
 echo "$timestamp There are $QUEUE_SIZE nodes provisioned in the queue"
 
@@ -89,11 +100,17 @@ if [ $TOT_ROUNDED -lt $QUEUE_SIZE ] ; then
    return 0
 else
   echo "$timestamp Need to submit COBALT jobs"
-  NJOBS=$(ceiling_divide $TOT_ROUNDED 256)
-  echo "$timestamp Submitting $NJOBS jobs"
-  for i in $( seq 1 $NJOBS );
-     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v mu2e;
-  done
+  if [[ $TOT_ROUNDED -gt 8 ]]; then
+    echo "$timestamp Limit for debug queues has been reached, submitting a 128 node production job"
+    /home/macosta/fnalhpc_startd/fife_request_glideins.sh -n 128 -t 180 -q default -v mu2e
+  else
+    echo "$timestamp Submitting $TOT_ROUNDED to debug queue"
+    /home/macosta/fnalhpc_startd/fife_request_glideins.sh -n $TOT_ROUNDED -q debug-flat-quad -v mu2e
+  fi
+#  echo "$timestamp Submitting $NJOBS jobs"
+#  for i in $( seq 1 $NJOBS ); 
+#     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms; 
+#  done
   return 0
 fi
 }

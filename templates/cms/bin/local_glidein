@@ -26,8 +26,7 @@ done
 
 SLOT_PREFIX="cobalt-cms-${JOB_ID}"
 GLIDEIN_NAME="cobalt-cms-${JOB_ID}@theta.alcf.anl.gov"
-THETA_BASE_DIR="/lus/theta-fs0/projects/HighLumin/job_area/${SLOT_PREFIX}"
-THETA_BASE_DIR_SING="/projects/HighLumin/job_area/${SLOT_PREFIX}"
+THETA_BASE_DIR="/lus/grand/projects/HighLumin/job_area/${SLOT_PREFIX}"
 SOURCE="$(dirname "${PWD}")"
 EDGE_BASE_DIR=`pwd`
 
@@ -55,7 +54,7 @@ cat >config.d/97-personal2.conf <<EOF
 NUM_SLOTS_TYPE_1 = $NODE_CNT
 MASTER_NAME = $GLIDEIN_NAME   
 STARTD_NAME = $GLIDEIN_NAME
-STARTER_REMOTE_DIR = $THETA_BASE_DIR_SING/rendezvous
+STARTER_REMOTE_DIR = $THETA_BASE_DIR/rendezvous
 THETA_VO = cms
 THETA_LOCAL_DIR = ${SOURCE}/edge_files
 EOF
@@ -108,4 +107,4 @@ echo ====== No htcondor here so, Singularity ftw
 echo htcondor_${SLOT_PREFIX} >> here.info
 echo ${THETA_BASE_DIR} >> here.info
 
-singularity instance start --containall --bind /etc/hosts --bind /lus/theta-fs0/projects/HighLumin:/projects/HighLumin --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/${THETA_USER}:/home/${THETA_USER} --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_edge_9_0_0.sif htcondor_${SLOT_PREFIX}
+singularity instance start --containall --bind /etc/hosts --bind /lus/grand/projects/HighLumin --env CONDOR_CONFIG=${EDGE_BASE_DIR}/condor_config --bind /home/${THETA_USER}:/home/${THETA_USER} --home ${EDGE_BASE_DIR} ${SOURCE}/containers/htcondor_edge_9_0_0.sif htcondor_${SLOT_PREFIX}

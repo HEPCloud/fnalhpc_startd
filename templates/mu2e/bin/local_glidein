@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Launch a full stack CMS glidein on a set of THETA nodes
+# Launch a full stack Mu2E split starter glidein on a set of THETA nodes
 # Gathering parameters for the request
 THETA_USER=macosta
 NODE_CNT=1
@@ -101,7 +101,7 @@ EOF
 
 # Next
 for ((i=1;i<=${NODE_CNT};i++)); do
-    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./mu2e_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
 done
 
