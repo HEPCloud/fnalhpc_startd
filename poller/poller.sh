@@ -29,13 +29,10 @@ echo "$timestamp $TOTAL_CORES total cores"
 
 N_CORES=64
 N_MEM=192000
-
-#TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
 TOT=`echo "scale=2 ; $TOTAL_CORES / 8" | bc`
-#TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
-TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 2)
+TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 64)
 
-echo "$timestamp We need $TOT nodes to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED)"
+echo "$timestamp We need $TOT cores to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED nodes)"
 QUEUE_SIZE=$(if [ -z $(qstat -u macosta | grep cms | awk '{s+=$5} END {print s}') ]; then echo 0 ; else qstat -u macosta | grep cms | awk '{s+=$5} END {print s}' ; fi)
 
 QUEUED_JOBCOUNT=$(qstat -u macosta | grep default | wc -l)
@@ -53,10 +50,6 @@ else
   NJOBS=$(ceiling_divide $TOT_ROUNDED 256)
   echo "$timestamp Submitting a single COBALT job"
   /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms
-#  echo "$timestamp Submitting $NJOBS jobs"
-#  for i in $( seq 1 $NJOBS ); 
-#     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms; 
-#  done
   return 0
 fi
 }
@@ -67,7 +60,7 @@ poll_mu2e(){
 
 echo "$timestamp Polling for Mu2e ..."
 
-singularity exec --bind ${PWD} --env CONDOR_CONFIG=./condor_config ~/fnalhpc_startd/templates/mu2e/containers/htcondor_edge_svc.sif condor_q -name hepcjobsub01.fnal.gov -allusers -nobatch -const 'Jobsub_Group=?="mu2e" && THETAJob==true && JobStatus == 1' -af RequestCpus RequestMemory > ./queue.current
+singularity exec --bind ${PWD} --env CONDOR_CONFIG=./condor_config ~/fnalhpc_startd/templates/mu2e/containers/htcondor_edge_svc.sif condor_q -name hepcjobsub01.fnal.gov -name hepcjobsub02.fnal.gov -allusers -nobatch -const 'Jobsub_Group=?="mu2e" && THETAJob==true && JobStatus == 1' -af RequestCpus RequestMemory > ./queue.current
 
 TOTAL_JOBS=`cat ./queue.current | wc -l`
 
@@ -85,12 +78,10 @@ echo "$timestamp $TOTAL_CORES total cores"
 N_CORES=64
 N_MEM=192000
 
-#TOT=`echo "scale=2 ; $TOTAL_CORES / $N_CORES" | bc`
 TOT=`echo "scale=2 ; $TOTAL_CORES / 8" | bc`
-#TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES $N_CORES)
-TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 2)
+TOT_ROUNDED=$(ceiling_divide $TOTAL_CORES 64)
 
-echo "$timestamp We need $TOT nodes to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED)"
+echo "$timestamp We need $TOT cores to fullfill CPU requirements (Ceiling rounded $TOT_ROUNDED nodes)"
 QUEUE_SIZE=$(if [ -z $(qstat -u macosta | grep mu2e | awk '{s+=$5} END {print s}') ]; then echo 0 ; else qstat -u macosta | grep cms | awk '{s+=$5} END {print s}' ; fi)
 
 echo "$timestamp There are $QUEUE_SIZE nodes provisioned in the queue"
@@ -103,22 +94,19 @@ else
   if [[ $TOT_ROUNDED -gt 8 ]]; then
     echo "$timestamp Limit for debug queues has been reached, submitting a 128 node production job"
     /home/macosta/fnalhpc_startd/fife_request_glideins.sh -n 128 -t 180 -q default -v mu2e
-  else
+  elif [[ $TOT_ROUNDED -lt 8 ]]; then
     echo "$timestamp Submitting $TOT_ROUNDED to debug queue"
     /home/macosta/fnalhpc_startd/fife_request_glideins.sh -n $TOT_ROUNDED -q debug-flat-quad -v mu2e
   fi
-#  echo "$timestamp Submitting $NJOBS jobs"
-#  for i in $( seq 1 $NJOBS ); 
-#     do /home/macosta/fnalhpc_startd/request_glideins.sh -n 256 -t 360 -q default -v cms; 
-#  done
   return 0
 fi
 }
 
 echo "$timestamp Cleaning up stale Singularity containers (if any) ..."
-qstat -u macosta
-
 comm -3  <(singularity instance list | awk '{print $1}'| awk -F '_' '{print $2}'| sort) <(qstat -u macosta | awk '{print $3}'| sort) | grep cobalt | xargs -I cont singularity instance stop htcondor_cont
+
+echo "$timestamp Cleaning up jobs with stale Singularity containers (if any) ..."
+for i in $(comm -3 <(qstat -u macosta | awk '{print $3}'| sort) <(singularity instance list | awk '{print $1}'| awk -F '_' '{print $2}'| sort) | grep cobalt) ; do qdel $(qstat -u macosta | grep $i | awk '{print $2}'); done
 
 poll_cms
 poll_mu2e
