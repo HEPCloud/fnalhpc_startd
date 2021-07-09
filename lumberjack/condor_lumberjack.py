@@ -22,14 +22,20 @@ def acquire_schedd(local=False):
     this session. This function will not return the same value, so keep it around until
     all jobs are removed!
     """
-    remotePool = re.findall(
-        r"[\w\/\:\/\-\/\.]+", htcondor.param.get("COLLECTOR_HOST")
-    )
+    if local:
+      remotePool = ['localhost']
+    else:
+      remotePool = re.findall(
+          r"[\w\/\:\/\-\/\.]+", htcondor.param.get("COLLECTOR_HOST")
+      )
     collector = None
     scheddAds = None
     for node in remotePool:
+        print(node)
+        print(type(remotePool))
+        print(remotePool)
         try:
-            collector = htcondor.Collector('cmssrv218')
+            collector = htcondor.Collector(node)
             scheddAds = collector.query(
                htcondor.AdTypes.Schedd,
                projection=[
@@ -43,6 +49,7 @@ def acquire_schedd(local=False):
                 constraint='FERMIHTC_LUMBERJACK_SCHEDD=?=true',
             )
             if scheddAds:
+                pprint.pprint(scheddAds)
                 break
         except Exception:
             print(traceback.format_exc())
@@ -121,4 +128,4 @@ if __name__=="__main__":
     pprint.pprint(SCHEDD)
 
     print(" == Importing job queue file at "+args.inpath+" ==")
-#    SCHEDD.import_exported_job_results(import_dir=args.inpath)
+    SCHEDD.import_exported_job_results(import_dir=args.inpath)
