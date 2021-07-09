@@ -103,14 +103,15 @@ if __name__=="__main__":
     sys.exit(1)
   args = parser.parse_args()
 
-  if export: 
+  if args.export: 
     print(" == Acquiring a Schedd with Lumberjack capabilities ==")
     SCHEDD = acquire_schedd()
     pprint.pprint(SCHEDD)
     
-    print(" == Exporting jobs with constraint " + args.jobconstraint)
+    print(" == Exporting jobs with constraint " + args.jobconstraint + " to output directory "+ args.out)
     try:
       SCHEDD.export_jobs(job_spec=args.jobconstraint, export_dir=args.out, new_spool_dir=args.remotespool)
+      print("Done!")
     #except htcondor.HTCondorIOError:
     except Exception:
       print(traceback.format_exc())
