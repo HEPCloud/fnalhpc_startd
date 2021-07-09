@@ -1,10 +1,13 @@
 #!/usr/bin/python
-import logging
-import htcondor
-import pprint
 import os
-import re
 import sys
+import re
+
+import argparse
+import logging
+import pprint
+import traceback
+import htcondor
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -84,11 +87,21 @@ if __name__=="__main__":
   parser.add_argument('-out', type=str,help='Output directory for the exported job file')
   parser.add_argument('-remotespool', type=str,help='Path of the SPOOL directory on the remote Schedd')
 
-  const = args.jobconstraint
+  args = parser.parse_args()
+#  const = args.jobconstraint
   # To show the results of the given option to screen.
   for _, value in parser.parse_args()._get_kwargs():
       if value is not None:
           print(value)
-
+          print(_)
+  print(" == Acquiring a Schedd with Lumberjack capabilities ==")
   SCHEDD = acquire_schedd()
-#  SCHEDD.export_jobs(job_spec=<constraint string or list of cluster ids>, export_dir=“/path/to/export”, new_spool_dir=“##”)
+  pprint.pprint(SCHEDD)
+  
+  print(" == Exporting jobs with constraint " + args.jobconstraint)
+  try:
+    SCHEDD.export_jobs(job_spec=args.jobconstraint, export_dir=args.out, new_spool_dir=args.remotespool)
+  #except htcondor.HTCondorIOError:
+  except Exception:
+    print(traceback.format_exc())
+ 
