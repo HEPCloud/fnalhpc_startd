@@ -49,14 +49,7 @@ ManagedManager = "Lumberjack"
 * When jobs are complete, the remote schedd needs to be shut down `condor_off -schedd` and the SPOOL directory needs to be transferred back to the original Schedd. You can then use `condor_lumberjack.py` to re-introduce the completed job queue. 
 * The schedd will merge the updated job ads from the remote schedd back into its job queue and clear the “externally managed” flag. In later versions, job output files will also be copied to the appropriate locations on the local machine.
 
-# Usage on the HPC side via Singularity (optional)
-* The following command will start a singularity instance running a self-contained HTCondor Schedd and will import a job queue previously exported from another scheduler
-* Make sure the container bind mounts the configured SPOOL directory and that it matches the '-out' path when the queue was exported
-```
-cd remote/
-singularity exec --containall --bind /etc/hosts --bind /lus/grand/projects/HighLumin/uscms/spool --env CONDOR_CONFIG=${PWD}/condor_config --home ${PWD} fnalhpc_startd/containers/htcondor_edge_9_0_0.sif python3 condor_lumberjack.py --import -in <path_to_exported_queue>
-```
-# Practical example on a MiniCondor Docker installation
+## Practical example on a MiniCondor Docker installation
 * HTCondor provides [curated Docker images](https://github.com/htcondor/htcondor/tree/master/build/docker/services) with different setups for flexible installations. MiniCondor is a self contained, single host, HTCondor pool which can run in any machine with a Docker installation.
 * With MiniCondor, the "remote" SPOOL directory should be `/var/lib/condor/spool`, so the export command should be similar to:
 ```
@@ -73,4 +66,12 @@ docker exec -ti minicondor /bin/bash
 * When the jobs have run successfully, transfer back the contents of `/var/lib/condor/spool` back to the remote schedd and run the import function:
 ```
 python3 condor_lumberjack.py --import -in /tmp/job_queue.log
+```
+
+## Usage on the HPC side via Singularity (optional)
+* The following command will start a singularity instance running a self-contained HTCondor Schedd and will import a job queue previously exported from another scheduler
+* Make sure the container bind mounts the configured SPOOL directory and that it matches the '-out' path when the queue was exported
+```
+cd remote/
+singularity exec --containall --bind /etc/hosts --bind /lus/grand/projects/HighLumin/uscms/spool --env CONDOR_CONFIG=${PWD}/condor_config --home ${PWD} fnalhpc_startd/containers/htcondor_edge_9_0_0.sif python3 condor_lumberjack.py --import -in <path_to_exported_queue>
 ```
