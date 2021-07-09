@@ -34,10 +34,16 @@ optional arguments:
                         Path of the SPOOL directory on the remote Schedd
   -in INPATH            Path to the exported job queue file to import
 ``` 
-* To export a group of jobs using matching a constraint run:
+* To export a group of jobs matching a constraint run:
 ```
 python3 condor_lumberjack.py --export -jobconstraint 'stringListIMember("T3_US_ANL",DESIRED_Sites) && stringListIMember("cms",x509UserProxyVOName)' -out /tmp  -remotespool /projects/HighLumin/uscms/spool
-```			
+```
+* Jobs will still show up in the queue but will be "locked" until they are exported back into the Schedd. Look out for the following Attributes:
+```
+LeaveJobInQueue = false
+Managed = "External"
+ManagedManager = "Lumberjack"
+````
 # Importing on the HPC side via Singularity (optional)
 * The following command will start a singularity instance running a self-contained HTCondor Schedd and will import a job queue previously exported from another scheduler
 * Make sure the container bind mounts the configured SPOOL directory and that it matches the '-out' path when the queue was exported
@@ -45,3 +51,14 @@ python3 condor_lumberjack.py --export -jobconstraint 'stringListIMember("T3_US_A
 cd remote/
 singularity exec --containall --bind /etc/hosts --bind /lus/grand/projects/HighLumin/uscms/spool --env CONDOR_CONFIG=${PWD}/condor_config --home ${PWD} fnalhpc_startd/containers/htcondor_edge_9_0_0.sif python3 condor_lumberjack.py --import -in <path_to_exported_queue>
 ```
+# Importing on a MiniCondor Docker installation
+* HTCondor provides [curated Docker images](https://github.com/htcondor/htcondor/tree/master/build/docker/services) with different setups for flexible installations. MiniCondor is a self contained, single host, HTCondor pool which can run in any machine with a Docker installation.
+* With MiniCondor, the "remote" SPOOL directory should be `/var/lib/condor/spool` like so:
+```
+python3 condor_lumberjack.py --export -jobconstraint 'stringListIMember("T3_US_ANL",DESIRED_Sites) && stringListIMember("cms",x509UserProxyVOName)' -out /tmp  -remotespool /var/lib/condor/spool
+````
+* After successfully exporting the job queue, you can obtain a bash terminal into the container and run the import function:
+```
+python3 condor_lumberjack.py --import -in /tmp/job_queue.log
+```
+* The jobs will show up in MiniCondor Schedd's `condor_q` and will match and run within the Startds (also contained in the same Docker image)
