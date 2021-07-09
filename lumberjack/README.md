@@ -1,5 +1,7 @@
 # Lumberjack Schedd prototype -- For exporting HTCondor job queues to HPC sites
 
+DISCLAIMER: This is an experimental feature and is currently under active R&D by the HTCondor team (Jaime Frey) and the HEPCloud project (Maria Acosta)
+
 ## Introduction
 Lumberjack is conceptually similar to HTCondor-C. A set of jobs in the local schedd are flagged as managed by an external scheduler and they end up in some remote schedd for scheduling and execution. Later (usually after the jobs complete), the updated job ad and output files are returned to the local schedd and the external scheduler flag is removed.
 Lumberjack differs from HTCondor-C in several ways:
