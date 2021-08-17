@@ -10,7 +10,6 @@ NO_COLOR="\033[0m"
 
 echo -e "${GR}====== New glidein request ======${NO_COLOR}"
 export REPO_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-export EDGE_AREA="/lus/grand/projects/HighLumin/edge_area"
 # Launch a full stack glidein on a set of THETA nodes
 # Gathering parameters for the request
 

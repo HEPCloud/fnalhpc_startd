@@ -36,7 +36,7 @@ optional arguments:
 ``` 
 * To export a group of jobs matching a constraint run:
 ```
-python3 condor_lumberjack.py --export -jobconstraint 'stringListIMember("T3_US_ANL",DESIRED_Sites) && stringListIMember("cms",x509UserProxyVOName)' -out /tmp  -remotespool /projects/HighLumin/uscms/spool
+python3 condor_lumberjack.py --export -jobconstraint 'stringListIMember("T3_US_ANL",DESIRED_Sites) && stringListIMember("cms",x509UserProxyVOName)' -out /tmp  -remotespool /projects/HEPCloud-FNAL/spool
 ```
 * Jobs will still show up in the queue but will be "locked" until they are exported back into the Schedd. Look out for the following Attributes:
 ```
@@ -73,5 +73,5 @@ python3 condor_lumberjack.py --import -in /tmp/job_queue.log
 * Make sure the container bind mounts the configured SPOOL directory and that it matches the '-out' path when the queue was exported
 ```
 cd remote/
-singularity exec --containall --bind /etc/hosts --bind /lus/grand/projects/HighLumin/uscms/spool --env CONDOR_CONFIG=${PWD}/condor_config --home ${PWD} fnalhpc_startd/containers/htcondor_edge_9_0_0.sif python3 condor_lumberjack.py --import -in <path_to_exported_queue>
+singularity exec --containall --bind /etc/hosts --bind /lus/grand/projects/HEPCloud-FNAL/spool --env CONDOR_CONFIG=${PWD}/condor_config --home ${PWD} fnalhpc_startd/containers/htcondor_edge_9_0_0.sif python3 condor_lumberjack.py --import -in <path_to_exported_queue>
 ```

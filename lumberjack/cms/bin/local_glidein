@@ -27,7 +27,7 @@ done
 
 SLOT_PREFIX="cobalt-cms-${JOB_ID}"
 GLIDEIN_NAME="cobalt-cms-${JOB_ID}@theta.alcf.anl.gov"
-THETA_BASE_DIR="/lus/grand/projects/HighLumin/job_area/${SLOT_PREFIX}"
+THETA_BASE_DIR="/projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}"
 SOURCE="$(dirname "${PWD}")"
 EDGE_BASE_DIR=`pwd`
 
@@ -54,7 +54,8 @@ cat >config.d/97-personal2.conf <<EOF
 #new startd name
 MASTER_NAME = master_${GLIDEIN_NAME}
 COLLECTOR_NAME = coll_${GLIDEIN_NAME} 
-SCHEDD_NAME = sched_${GLIDEIN_NAME}   
+SCHEDD_NAME = sched_${GLIDEIN_NAME}
+STARTD_NAME = startd_${GLIDEIN_NAME}
 EOF
 
 # create sshfs connection
@@ -83,10 +84,10 @@ EOF
 
 # Next
 # Submitting the "head" job with: Master, Collector, Negotiator, Schedd
-echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh -r CentralMgr &" >> ${THETA_BASE_DIR}/job.cobalt
 # Submitting "worker" jobs with: Master, Startd
-for ((i=2;i<=${NODE_CNT};i++)); do
-    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &" >> ${THETA_BASE_DIR}/job.cobalt
+for ((i=1;i<=${NODE_CNT};i++)); do
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
 done
 
@@ -99,5 +100,5 @@ echo INFO: Files written
 echo INFO: Submitting COBALT job 
 
 # Submit cobalt job
-cd ${THETA_BASE_DIR}; qsub -A HighLumin -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
+#cd ${THETA_BASE_DIR}; qsub -A HighLumin -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
 echo INFO: Done, check your job and files at ${THETA_BASE_DIR}

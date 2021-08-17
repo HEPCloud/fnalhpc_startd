@@ -3,7 +3,7 @@
 1. [Bug] Lumberjack kills the Schedd when (presumably) not able to write to a directory
 When issuing an `export` command as root, error log shows:
 ```
-07/09/21 02:45:26 (pid:1515767) ExportJobs(...,'/root','/projects/HighLumin/uscms/spool')
+07/09/21 02:45:26 (pid:1515767) ExportJobs(...,'/root','/projects/HEPCloud-FNAL/spool')
 07/09/21 02:45:26 (pid:1515767) ERROR "failed to open log /root/job_queue.log, errno = 13
 " at line 527 in file /var/lib/condor/execute/slot12/dir_24715/userdir/.tmpG5Gx94/BUILD/condor-9.1.1/src/condor_utils/classad_log.h
 07/09/21 02:45:26 (pid:1515767) Cron: Killing all jobs
@@ -15,7 +15,7 @@ When issuing an `export` command as root, error log shows:
 Immediatly, the Schedd crashed and restarted.
 Changed output directory to /tmp, the export command succeeds
 ```
-07/09/21 02:47:38 (pid:1518037) ExportJobs(...,'/tmp','/projects/HighLumin/uscms/spool')
+07/09/21 02:47:38 (pid:1518037) ExportJobs(...,'/tmp','/projects/HEPCloud-FNAL/spool')
 07/09/21 02:47:38 (pid:1518037) ExportJobs() returning true
 ```
 
