@@ -1,6 +1,0 @@
-# Schedd settings
-CONDOR_Q_DASH_BATCH_IS_DEFAULT = False
-CONDOR_Q_ONLY_MY_JOBS = False
-
-LOG = $ENV(LOG_DIR) 
-SPOOL = $ENV(SPOOL_DIR) 
