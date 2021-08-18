@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: htcondor/base:el7
+
+%files
+    ./start_condor_lumberjack.sh /usr/local/bin/start_condor_lumberjack.sh
+
+%post
+    groupadd -g 10505 HEPCloud-FNAL
+    useradd -g HEPCloud-FNAL -G users -u 35068 macosta
+    chown -R macosta: /home/macosta
+#    yum -y install vim git
+
+    chmod a+x /usr/local/bin/start_condor_lumberjack.sh
+
+%environment
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+
+%startscript
+    /usr/local/bin/start_condor_lumberjack.sh
+
+%runscript
+    /usr/local/bin/start_condor_lumberjack.sh
