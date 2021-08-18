@@ -1,6 +1,0 @@
-#!/bin/bash
-
-JOB_NUMBER=$1
-echo Shutting down HTCondor container
-SING_NAME=cobalt-cms-$1
-singularity instance stop SING_NAME
