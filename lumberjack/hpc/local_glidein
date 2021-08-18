@@ -30,8 +30,6 @@ done
 SLOT_PREFIX="cobalt-cms-${JOB_ID}"
 GLIDEIN_NAME="cobalt-cms-${JOB_ID}@theta.alcf.anl.gov"
 THETA_BASE_DIR="/projects/${ALLOCATION}/job_area/${SLOT_PREFIX}"
-SOURCE="$(dirname "${PWD}")"
-EDGE_BASE_DIR=`pwd`
 
 echo "====== Submitting a Lumberjack cobalt job from ${HOSTNAME} under local Linux user $(whoami)"
 LNS=$(qstat -u ${THETA_USER} | wc -l)
@@ -49,8 +47,9 @@ echo INFO: Using directory $THETA_BASE_DIR
 echo ====== Writing base files
 echo Copy the "skeleton" folder as-is
 cp -dR skeleton/* $THETA_BASE_DIR/
+cp -dR minicondor_lumberjack_start.sh $THETA_BASE_DIR/minicondor_lumberjack_start.sh
 echo Put the job_queue.log file in place
-cp -dR ${SCHEDD_FILE} $THETA_BASE_DIR/spool/job_queue.log
+cp -dR ${SCHEDD_FILE} $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
 echo Generate and make sure permissions are well set for the pool_password
 openssl rand -hex 32 > $THETA_BASE_DIR/secrets/pool_password
 chmod 400 $THETA_BASE_DIR/secrets/pool_password
@@ -85,9 +84,9 @@ EOF
 
 # Next
 # Submitting the "head" job with: Master, Collector, Negotiator, Schedd and Startds (in case I'm running on a single node)
-echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./minicondor_lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./minicondor_lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
 # Submitting "worker" jobs with: Master, Startd
-for ((i=1;i<=${NODE_CNT};i++)); do
+for ((i=2;i<=${NODE_CNT};i++)); do
     echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./minicondor_lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
 done

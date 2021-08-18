@@ -25,7 +25,7 @@ use ROLE: Execute
 
 # Configure HTCondor services to listen to port 9618 on the IPv4
 # loopback interface.
-NETWORK_INTERFACE = 127.0.0.1
+#NETWORK_INTERFACE = 127.0.0.1
 BIND_ALL_INTERFACES = False
 CONDOR_HOST = 127.0.0.1
 
