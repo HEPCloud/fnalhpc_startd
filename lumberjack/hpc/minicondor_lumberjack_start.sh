@@ -17,7 +17,6 @@ timestamp="$(date +%d-%m-%Y_%H-%M-%S) - $(hostname) ($COBALT_NODEID) - "
 # Some defaults
 HTC_ROLE='Execute'
 SINGULARITY_IMAGE='htcondor_execute_lumberjack.sif'
-SLOT_PREFIX='cobalt-1562'
 verbose=false
 
 while getopts 'r:v' flag; do
@@ -34,8 +33,14 @@ BASE=${PWD}
 echo "$timestamp Running a self-contained HTCondor pool with role: ${HTC_ROLE}"
 if [[ ${HTC_ROLE} == *"CentralManager"* ]]; then
   SINGULARITY_IMAGE="htcondor_centralmgr_lumberjack.sif"
-  # Uncomment next line for testing
   test -e $JOB_QUEUE_FILE || (echo "Job queue file does not exist" ; exit 1)
+  echo "I am a central manager, writing my info at ${PWD}/${SLOT_PREFIX}/90_central_mgr"
+  cat >${PWD}/${SLOT_PREFIX}/90_central_mgr <<EOF
+  # HPC-miniconddor central manager info
+  COLLECTOR_NAME = coll_${GLIDEIN_NAME}
+  COLLECTOR_HOST = ${HOSTNAME}
+  CONDOR_HOST = ${HOSTNAME}
+EOF
 fi
 
 echo "$timestamp Cleaning up possible leftovers from previous jobs"
@@ -49,7 +54,6 @@ echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
 {
     cd ${BASE}
     CONTAINER_NAME="${SLOT_PREFIX}.${HOSTNAME}"
-    #cp /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE} ${SSD_SCRATCH}/${SINGULARITY_IMAGE}
     echo "$timestamp Launching CVMFSexec and minicondor inside Singularity"
 #    singularity run --env JOB_QUEUE_FILE=/srv/job_queue.log --env SPOOL_DIR=${SPOOL_DIR} --env LOG_DIR=${LOG_DIR} --bind /etc/hosts --bind /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}:/srv --bind /cvmfs --bind ${SSD_SCRATCH} --home /srv ${SSD_SCRATCH}/${SINGULARITY_IMAGE}
 #    singularity instance start --containall --bind /etc/hosts --bind ${PWD}/${SLOT_PREFIX}/local_dir:/srv --bind ${PWD}/${SLOT_PREFIX}/condor:/etc/condor --hostname ${CONTAINER_NAME} /root/fnalhpc_startd/lumberjack/singularity/${SINGULARITY_IMAGE} ${CONTAINER_NAME}
