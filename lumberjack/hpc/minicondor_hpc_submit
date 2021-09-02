@@ -7,6 +7,7 @@ WHT="\033[1;97m"
 CY="\033[1;36m"
 MGT="\033[1;35m"
 GR="\033[1;32m"
+RD="\033[1;31m"
 NO_COLOR="\033[0m"
 
 # Launch a full stack CMS glidein on a set of THETA nodes
@@ -19,7 +20,7 @@ JOB_ID=${RANDOM}
 ALLOCATION=HEPCloud-FNAL
 verbose='false'
 
-while getopts 'u:n:q:t:v:j:f:' flag; do
+while getopts 'u:n:q:t:v:j:f:h' flag; do
   case "${flag}" in
     u) THETA_USER="${OPTARG}" ;;
     n) NODE_CNT="${OPTARG}" ;;
@@ -29,10 +30,20 @@ while getopts 'u:n:q:t:v:j:f:' flag; do
     f) SCHEDD_FILE="${OPTARG}" ;;
     a) ALLOCATION="${OPTARG}" ;;
     v) verbose='true' ;;
-    *) echo "Usage: $0 -u [<THETA user>] -n [<node cnt>] -q [<THETA queue>] -t [<Node time required>] -f [<SCHEDD exported job queue file location] -a [<THETA allocation]>" 1>&2 ; exit 1
+    h) echo "Usage: $0"
+       echo "Optional: -u [<THETA user>] -n [<Node count>] -q [<THETA queue>] -t [<Node time>] -a [<THETA allocation]>"
+       echo "Required: -f [<SCHEDD job queue file]" 1>&2 ; exit 1
        ;;
   esac
 done
+
+if [ -n ${SCHEDD_FILE} ]
+then
+  echo -e "${RD}# ERROR: A required parameter '-f [<SCHEDD job queue file]' was not detected"
+  echo -e "${RD}# I need a lumberjack-exported job_queue.log to work properly"
+  echo -e "# For insructions about the experimental export process, go to: https://github.com/HEPCloud/fnalhpc_startd/tree/master/lumberjack"
+exit 1
+fi 
 
 SLOT_PREFIX="cobalt-cms-${JOB_ID}"
 GLIDEIN_NAME="cobalt-cms-${JOB_ID}@theta.alcf.anl.gov"
