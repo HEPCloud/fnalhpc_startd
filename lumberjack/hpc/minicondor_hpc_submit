@@ -37,7 +37,7 @@ while getopts 'u:n:q:t:v:j:f:h' flag; do
   esac
 done
 
-if [ -n ${SCHEDD_FILE} ]
+if [ -z "${SCHEDD_FILE}" ]
 then
   echo -e "${RD}# ERROR: A required parameter '-f [<SCHEDD job queue file]' was not detected"
   echo -e "${RD}# I need a lumberjack-exported job_queue.log to work properly"
@@ -68,7 +68,7 @@ echo ""
 echo ====== Writing base files
 echo Copy the "skeleton" folder as-is
 cp -dR skeleton/* $THETA_BASE_DIR/
-cp -dR minicondor_lumberjack_start.sh $THETA_BASE_DIR/minicondor_lumberjack_start.sh
+cp -dR lumberjack_start.sh $THETA_BASE_DIR/lumberjack_start.sh
 echo Put the job_queue.log file in place
 cp -dR ${SCHEDD_FILE} $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
 echo Generate and make sure permissions are well set for the pool_password
@@ -112,7 +112,7 @@ echo -e "# this HPC-minicondor job by placing them into:                        
 echo -e "# $SANDBOX_DIR"
 echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo -e ""
-echo "Original IWD: $dir"
+echo "Original IWD: ${ORIG_IWD}"
 echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
 echo ""
 # Files we will transfer/list: Cmd + TransferInput
@@ -130,7 +130,7 @@ do
 #    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
 done
 echo -e "# Tips:"
-echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will **automatically** atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
+echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will automatically atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
 echo ""
 echo "    > scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
 echo ""
@@ -142,7 +142,7 @@ echo ""
 # Create UserLog, Out and Err directories"
 OUT=$(grep -wR 'Out' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
 ERR=$(grep -wR 'Err' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | tr -d \" | sort -u)
 [ -z "$OUT" ] && echo "" || mkdir ${SANDBOX_DIR}/$OUT
 [ -z "$ERR" ] && echo "" || mkdir ${SANDBOX_DIR}/$ERR
 [ -z "$LOG" ] && echo "" || mkdir ${SANDBOX_DIR}/condor_log
@@ -150,25 +150,23 @@ LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}'
 ## Verify if we have a krb ticket, if so, attempt to SCP the files while we're at it
 kticket=`klist 2> /dev/null | grep FNAL.GOV`
 if [ -n "$kticket" ]; then
-  echo -e "${GR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST}"
+  echo -e "${NO_COLOR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST}"
+  echo -e "Unfortunately this feature doesn't work. Inbound SSH is not allowed to the FNAL schedd by the site firewall"
+  echo -e "The following scp commands would have been executed:"
   echo -e "scp root@${ORIG_SCHEDD_HOST}:$ORIG_SCHEDD_CMD ${NEWDIR}/${ORIG_CMD}"
   echo -e "scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
 else
-    echo "No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts"
-    echo 'See "Tips:" above'
-    echo "- ${SANDBOX_DIR}/${ORIG_CMD}"
+    echo -e "${NO_COLOR}No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts"
+    echo -e 'See "Tips:" above'
+    echo -e "- ${SANDBOX_DIR}/${ORIG_CMD}"
     for file in "${XFER_LIST[@]}"
     do
       NEWLOC="${SANDBOX_DIR}/$file"
-      echo "- $NEWLOC"
+      echo -e "- $NEWLOC"
     done
 fi
 echo ""
-echo -e "Done, verify that the file tree looks good"
-echo ""
-ls -ltrha ${SANDBOX_DIR}
-
-exit 0
+echo -e "Done, sandbox directory located at: ${SANDBOX_DIR}"
 
 # write theta files
 echo ====== Writing files for job submission
@@ -191,10 +189,10 @@ EOF
 
 # Next
 # Submitting the "head" job with: Master, Collector, Negotiator, Schedd and Startds (in case I'm running on a single node)
-echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./minicondor_lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env SANDBOX_BIND_TO=${ORIG_IWD} --env SANDBOX_BIND_PATH=${SANDBOX_DIR} --env COBALT_NODEID=1 ./lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
 # Submitting "worker" jobs with: Master, Startd
 for ((i=2;i<=${NODE_CNT};i++)); do
-    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./minicondor_lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
 done
 
