@@ -76,10 +76,22 @@ EOF
 echo ""
 echo "====== Analyzing job_queue.log for directories needed by my jobs"
 echo ""
-SANDBOX_DIR=${PWD}/${SLOT_PREFIX}/sandbox
+SANDBOX_DIR=${THETA_BASE_DIR}/sandbox
 ORIG_SCHEDD_HOST=$(grep -wR 'GlobalJobId' job_queue.log | awk '{print $4}' | tr -d \" | awk -F# '{print $1}' | sort -u)
 echo -e "${YL}Input job_queue.log indicates my source Schedd host is: ${ORIG_SCHEDD_HOST}${NO_COLOR}"
 WORKDIR_LIST=$(grep -R Iwd job_queue.log | awk '{print $4}' | sort -u | tr -d \")
+
+# This for loop is not needed, we are assuming there's a single, common IWD for all exported jobs
+# But it might come helpful if we figure out how to do this cleanly
+for dir in $WORKDIR_LIST 
+do
+#   echo "Original IWD: $dir"
+   ORIG_IWD=${dir}
+   NEWDIR="${PWD}/${SLOT_PREFIX}/sandbox"
+   mkdir -p $SANDBOX_DIR
+#   echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+done
+
 
 echo -e "${MGT}"
 echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -89,32 +101,9 @@ echo -e "# this HPC-minicondor job by placing them into:                        
 echo -e "# $SANDBOX_DIR"
 echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo -e ""
-echo -e "# Tips:"
-echo -e "# To pull the file list from the local(HPC) login node. First make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22). Files will be copied via 'scp', I have prepared the exact command recipe. If both networking and authentication via ssh are possible between the two machines, this script will **automatically** atemmpt to run the scp command and pull the necessary files."
-echo -e "scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
-echo -e "# To push the files from the remote schedd machine. First make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22). If there is only one-way connectivity, as is the case of FNAL (our machines can not be accessed from offsite, and ANL is offsite but also DOE. Anyway, when this is the case, we can just login to the Schedd and scp the files over to the login node, which by default has ssh connectivity most of the time. The only caveat here is that we still need someone (Maria) to do this by hand with a token that lives in her phone. I have prepared that command if that is your case, please login to your Schedd machine ${SCHEDD_ORIG_HOST} and run the following: "
-echo -e "scp ${FILE_LIST} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
-
-# This for loop is not needed, we are assuming there's a single, common IWD for all exported jobs
-# But it might come helpful if we figure out how to do this cleanly
-for dir in $WORKDIR_LIST 
-do
-   echo "Original IWD: $dir"
-   ORIG_IWD=${dir}
-   NEWDIR="${PWD}/${SLOT_PREFIX}/sandbox"
-   mkdir -p $SANDBOX_DIR
-   echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
-done
-
-# Create UserLog, Out and Err directories"
-OUT=$(grep -wR 'Out' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-ERR=$(grep -wR 'Err' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-[ -z "$OUT" ] && echo "" || mkdir ${SANDBOX_DIR}/$OUT
-[ -z "$ERR" ] && echo "" || mkdir ${SANDBOX_DIR}/$ERR
-[ -z "$LOG" ] && echo "" || mkdir ${SANDBOX_DIR}/condor_log
-
-## Verify if we have a krb ticket, if so, attempt to SCP the files while we're at it
+echo "Original IWD: $dir"
+echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+echo ""
 # Files we will transfer/list: Cmd + TransferInput
 XFERS=$(grep -wR 'TransferInput' job_queue.log | awk '{print $4}' | sort -u | tr -d \")
 IFS=',' read -ra XFER_LIST <<< "$XFERS"
@@ -129,6 +118,25 @@ do
     FILE_LIST="${FILE_LIST} ${ORIG_IWD}/$file"
 #    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
 done
+echo -e "# Tips:"
+echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will **automatically** atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
+echo ""
+echo "    > scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
+echo ""
+echo "To push the files from the remote schedd machine, if there is only one-way connectivity, as is the case of FNAL (our machines can not be accessed from offsite). You'll need to login to the Schedd and 'scp' the files over to the login node, which by default has inbound ssh connectivity. The caveat here is that we still need someone (Maria) to do this by hand with an MFA token that lives in her phone. If that is your case, please login to your Schedd machine ${SCHEDD_ORIG_HOST} and run the following instruction:" | fold | awk '{ print "\t" $0 }'
+echo ""
+echo "    > scp ${FILE_LIST} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
+echo ""
+
+# Create UserLog, Out and Err directories"
+OUT=$(grep -wR 'Out' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+ERR=$(grep -wR 'Err' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+[ -z "$OUT" ] && echo "" || mkdir ${SANDBOX_DIR}/$OUT
+[ -z "$ERR" ] && echo "" || mkdir ${SANDBOX_DIR}/$ERR
+[ -z "$LOG" ] && echo "" || mkdir ${SANDBOX_DIR}/condor_log
+
+## Verify if we have a krb ticket, if so, attempt to SCP the files while we're at it
 kticket=`klist 2> /dev/null | grep FNAL.GOV`
 if [ -n "$kticket" ]; then
   echo -e "${GR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST}"
@@ -136,7 +144,7 @@ if [ -n "$kticket" ]; then
   echo -e "scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
 else
     echo "No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts"
-    echo 'See "Useful commands:" above for clues'
+    echo 'See "Tips:" above'
     echo "- ${SANDBOX_DIR}/${ORIG_CMD}"
     for file in "${XFER_LIST[@]}"
     do
