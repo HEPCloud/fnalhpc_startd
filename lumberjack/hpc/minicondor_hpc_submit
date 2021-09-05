@@ -121,12 +121,12 @@ IFS=',' read -ra XFER_LIST <<< "$XFERS"
 
 ORIG_SCHEDD_CMD=$(grep -wR 'Cmd' job_queue.log | awk '{print $4}' | sort -u | tr -d \")
 ORIG_CMD=$(grep -wR 'Cmd' job_queue.log | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
-FILE_LIST="${ORIG_SCHEDD_CMD}"
+FILE_LIST="\"${ORIG_CMD}\""
 #  echo -e "scp root@${ORIG_SCHEDD_HOST}:$ORIG_SCHEDD_CMD ${NEWDIR}/${ORIG_CMD}"
 for file in "${XFER_LIST[@]}"
 do
     NEWLOC="${SANDBOX_DIR}/$file"
-    FILE_LIST="${FILE_LIST} ${ORIG_IWD}/$file"
+    FILE_LIST="${FILE_LIST},"\"$file\"
 #    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
 done
 echo -e "# Tips:"
@@ -136,7 +136,7 @@ echo "    > scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
 echo ""
 echo "To push the files from the remote schedd machine, if there is only one-way connectivity, as is the case of FNAL (our machines can not be accessed from offsite). You'll need to login to the Schedd and 'scp' the files over to the login node, which by default has inbound ssh connectivity. The caveat here is that we still need someone (Maria) to do this by hand with an MFA token that lives in her phone. If that is your case, please login to your Schedd machine ${SCHEDD_ORIG_HOST} and run the following instruction:" | fold | awk '{ print "\t" $0 }'
 echo ""
-echo "    > scp ${FILE_LIST} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
+echo "    > scp ${ORIG_IWD}/{${FILE_LIST}} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
 echo ""
 
 # Create UserLog, Out and Err directories"
@@ -167,6 +167,7 @@ else
 fi
 echo ""
 echo -e "Done, sandbox directory located at: ${SANDBOX_DIR}"
+echo ""
 
 # write theta files
 echo ====== Writing files for job submission
@@ -205,5 +206,5 @@ echo INFO: Files written
 echo INFO: Submitting COBALT job 
 
 # Submit cobalt job
-#cd ${THETA_BASE_DIR}; qsub -A ${ALLOCATION} -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
+cd ${THETA_BASE_DIR}; qsub -A ${ALLOCATION} -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
 echo INFO: Done, check your job and files at ${THETA_BASE_DIR}

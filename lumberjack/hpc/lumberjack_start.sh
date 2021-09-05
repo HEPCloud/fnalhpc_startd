@@ -57,7 +57,7 @@ echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
     echo "$timestamp Launching CVMFSexec and minicondor inside Singularity"
 #    singularity run --env JOB_QUEUE_FILE=/srv/job_queue.log --env SPOOL_DIR=${SPOOL_DIR} --env LOG_DIR=${LOG_DIR} --bind /etc/hosts --bind /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}:/srv --bind /cvmfs --bind ${SSD_SCRATCH} --home /srv ${SSD_SCRATCH}/${SINGULARITY_IMAGE}
 #    singularity instance start --containall --bind /etc/hosts --bind ${PWD}/${SLOT_PREFIX}/local_dir:/srv --bind ${PWD}/${SLOT_PREFIX}/condor:/etc/condor --hostname ${CONTAINER_NAME} /root/fnalhpc_startd/lumberjack/singularity/${SINGULARITY_IMAGE} ${CONTAINER_NAME}
-    singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
+    singularity run --containall --bind ${SANDBOX_BIND_PATH}:${SANDBOX_BIND_TO} --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
 } || 
 {
     echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
