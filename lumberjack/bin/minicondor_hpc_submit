@@ -87,7 +87,7 @@ EOF
 echo ""
 echo "====== Analyzing job_queue.log for directories needed by my jobs"
 echo ""
-SANDBOX_DIR=${THETA_BASE_DIR}/sandbox
+SANDBOX_DIR=${THETA_BASE_DIR}/local_dir/sandbox
 ORIG_SCHEDD_HOST=$(grep -wR 'GlobalJobId' job_queue.log | awk '{print $4}' | tr -d \" | awk -F# '{print $1}' | sort -u)
 echo -e "${YL}Input job_queue.log indicates my source Schedd host is: ${ORIG_SCHEDD_HOST}${NO_COLOR}"
 WORKDIR_LIST=$(grep -R Iwd job_queue.log | awk '{print $4}' | sort -u | tr -d \")
@@ -115,6 +115,14 @@ echo -e ""
 echo "Original IWD: ${ORIG_IWD}"
 echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
 echo ""
+echo -e "${NO_COLOR}Backing up original job_queue.log and editing Iwd for HPC job"
+cp job_queue.log $THETA_BASE_DIR/job_queue.log_original
+# A bit of info on this, $SANDBOX_DIR is the local directory where I'm throwing the sandboxes for jobs
+# It is mounted in the container under /srv/sandbox (see lumberjack_start.sh)
+sed -i 's,'"$ORIG_IWD"',/srv/sandbox,g' $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
+echo -e "job_queue.log edited in place at $THETA_BASE_DIR/local_dir/lib/condor/spool"
+echo ""
+
 # Files we will transfer/list: Cmd + TransferInput
 XFERS=$(grep -wR 'TransferInput' job_queue.log | awk '{print $4}' | sort -u | tr -d \")
 IFS=',' read -ra XFER_LIST <<< "$XFERS"
@@ -129,7 +137,7 @@ do
     FILE_LIST="${FILE_LIST},"\"$file\"
 #    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
 done
-echo -e "# Tips:"
+echo -e "${MGT}# Tips:"
 echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will automatically atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
 echo ""
 echo "    > scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
@@ -150,11 +158,10 @@ LOG=$(grep -wR 'UserLog' job_queue.log | awk '{print $4}' | tr -d \" | sort -u)
 ## Verify if we have a krb ticket, if so, attempt to SCP the files while we're at it
 kticket=`klist 2> /dev/null | grep FNAL.GOV`
 if [ -n "$kticket" ]; then
-  echo -e "${NO_COLOR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST}"
-  echo -e "Unfortunately this feature doesn't work. Inbound SSH is not allowed to the FNAL schedd by the site firewall"
-  echo -e "The following scp commands would have been executed:"
-  echo -e "scp root@${ORIG_SCHEDD_HOST}:$ORIG_SCHEDD_CMD ${NEWDIR}/${ORIG_CMD}"
-  echo -e "scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
+  echo -e "${NO_COLOR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST} with command:"
+  echo -e "${GR}scp -o StrictHostKeyChecking=no -o GSSAPIAuthentication=true -o GSSAPIDelegateCredentials=true -o ProxyCommand="\"ssh -K -W %h:%p $(whoami)@cmslpc174.fnal.gov"\" root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/{${FILE_LIST}} ${SANDBOX_DIR} ${NO_COLOR}"
+  echo ""
+  scp -o StrictHostKeyChecking=no -o GSSAPIAuthentication=true -o GSSAPIDelegateCredentials=true -o ProxyCommand="ssh -K -W %h:%p $(whoami)@cmslpc174.fnal.gov" root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/{${FILE_LIST}} ${SANDBOX_DIR}
 else
     echo -e "${NO_COLOR}No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts"
     echo -e 'See "Tips:" above'
@@ -165,8 +172,7 @@ else
       echo -e "- $NEWLOC"
     done
 fi
-echo ""
-echo -e "Done, sandbox directory located at: ${SANDBOX_DIR}"
+echo -e "# Sandbox directory located at: ${SANDBOX_DIR}"
 echo ""
 
 # write theta files
@@ -190,7 +196,7 @@ EOF
 
 # Next
 # Submitting the "head" job with: Master, Collector, Negotiator, Schedd and Startds (in case I'm running on a single node)
-echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env SANDBOX_BIND_TO=${ORIG_IWD} --env SANDBOX_BIND_PATH=${SANDBOX_DIR} --env COBALT_NODEID=1 ./lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
 # Submitting "worker" jobs with: Master, Startd
 for ((i=2;i<=${NODE_CNT};i++)); do
     echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
@@ -201,10 +207,12 @@ echo "wait" >> ${THETA_BASE_DIR}/job.cobalt
 
 chmod a+rx ${THETA_BASE_DIR}/job.cobalt
 
-echo INFO: Files written
-
-echo INFO: Submitting COBALT job 
+echo Files written
+echo Fixing permissions on directories to bind
+#chmod -R 777 $THETA_BASE_DIR/local_dir
+echo Submitting COBALT job 
 
 # Submit cobalt job
-cd ${THETA_BASE_DIR}; qsub -A ${ALLOCATION} -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required job.cobalt
-echo INFO: Done, check your job and files at ${THETA_BASE_DIR}
+cd ${THETA_BASE_DIR}; qsub -A ${ALLOCATION} -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required:enable_ssh=1 job.cobalt
+echo ""
+echo Done!!! check your job and files at ${THETA_BASE_DIR}
