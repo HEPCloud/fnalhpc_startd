@@ -36,15 +36,87 @@ Create said directories within the HPC job sandbox and bind mount them to the co
 Transfer the list of files to the $HPC-Iwd directory, created in the previous step (by hand, for now).
 -> 3. Check for other relevant directories: `UserLog`, `Out`, `Err` and create them if relative to `Iwd`
 
-TODO: No inbound, hangs, FNAL site firewall blocks this, maybe we can do it from a WMAgent, need to test this with cmsgwms-submit1?. Would be wonderful if script would just scp everything before HPC/COBALT job is submitted.
+5. [Enhancement] Moving files by hand really is a pain. I wrote a very simple and rudimentary file transfer mechanism that takes advantage of having Kerberos on the login node, being able to actually `kinit @FNAL.GOV`, grabbing a ticket and use the LPC as proxy host for the SCP command. Yay for automation :)
+https://github.com/HEPCloud/fnalhpc_startd/issues/5
+This was fixed by https://github.com/HEPCloud/fnalhpc_startd/commit/6db4feff562d170aef8883fcfe5fbb2a62ca0f92
+
+6. [Note] A note about `minicondor_hpc_submit` where the magic happens. This script has multiple functions and steps but in a nutshell will do all the wiring and submitting for you. This is what a typical run of this script looks like:
+
 ```
-╰─ [$] scp -vvv root@fermicloud510.fnal.gov:/home/cmsdataops/macosta/CMSSW-mcgen-testjob.sh /home/macosta/fnalhpc_startd/lumberjack/hpc/cobalt-cms-13499/sandbox/CMSSW-mcgen-testjob.sh
-Executing: program /usr/bin/ssh host fermicloud510.fnal.gov, user root, command scp -v -f /home/cmsdataops/macosta/CMSSW-mcgen-testjob.sh
-OpenSSH_7.9p1, OpenSSL 1.1.0i-fips  14 Aug 2018
-debug1: Reading configuration data /etc/ssh/ssh_config
-debug1: /etc/ssh/ssh_config line 2: Applying options for *
-debug2: resolving "fermicloud510.fnal.gov" port 22
-debug2: ssh_connect_direct
-debug1: Connecting to fermicloud510.fnal.gov [131.225.152.148] port 22.
+╰─ [$] ./minicondor_hpc_submit -f job_queue.log
+====== Submitting a Lumberjack cobalt job from thetalogin4
+Local Linux user: macosta
+
+====== Creating base directory on shared storage
+Using directory /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179
+
+====== Writing base files
+Copy the skeleton folder as-is
+Put the job_queue.log file in place
+Generate and make sure permissions are well set for the pool_password
+Add custom names to our daemons
+
+====== Analyzing job_queue.log for directories needed by my jobs
+
+Input job_queue.log indicates my source Schedd host is: {schedd}.fnal.gov
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Lumberjack does not yet support file transfer
+# Make sure the following files from the original Schedd are available to
+# this HPC-minicondor job by placing them into:
+# /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Original IWD: /home/cmsdataops/macosta
+HPC-minicondor IWD: /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox
+
+Backing up original job_queue.log and editing Iwd for HPC job
+job_queue.log edited in place at /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/lib/condor/spool
+
+# Tips:
+	To pull the files from the local(HPC) login node, first make sure that there is
+	networking connectivity between the login node and the remote schedd via SSH (po
+	rt 22), files will be copied via 'scp'. If both networking and authentication vi
+	a ssh are possible from the login node to the remote Schedd, this script will au
+	tomatically atemmpt to run the following scp command and pull the necessary file
+	s:
+
+    > scp {user}@{schedd}.fnal.gov:'"CMSSW-mcgen-testjob.sh","ThetaGen.sh","step1_gen.py"' /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox
+
+	To push the files from the remote schedd machine, if there is only one-way conne
+	ctivity, as is the case of FNAL (our machines can not be accessed from offsite).
+	 You'll need to login to the Schedd and 'scp' the files over to the login node,
+	which by default has inbound ssh connectivity. The caveat here is that we still
+	need someone (Maria) to do this by hand with an MFA token that lives in her phon
+	e. If that is your case, please login to your Schedd machine  and run the follow
+	ing instruction:
+
+    > scp /home/cmsdataops/macosta/{"CMSSW-mcgen-testjob.sh","ThetaGen.sh","step1_gen.py"} {user}@theta.alcf.anl.gov:/projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox
+
+No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts
+See "Tips:" above
+- /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox/CMSSW-mcgen-testjob.sh
+- /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox/ThetaGen.sh
+- /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox/step1_gen.py
+# Sandbox directory located at: /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179/local_dir/sandbox
+
+====== Writing files for job submission
+Files written
+Fixing permissions on directories to bind
+Submitting COBALT job
+Job routed to queue "debug-cache-quad".
+Memory mode set to cache quad for queue debug-cache-quad
+547797
+
+Done.. Check your job and files at /projects/HEPCloud-FNAL/job_area/cobalt-cms-6179
 ```
-In the meantime, login node has SSH inbound connectivity and can be reached by the Schedd, so we need to scp the files over. This can't be automated in any way since SSH login to ALCF requires MFA. But the script will generate the command... or maybe write it to a mini script. Will have to implement that as it sounds useful. 
+IF the script detects a FNAL.GOV kerberos ticket, it will attempt to do the SCP itself using the LPC as tunnel the outout changes to: 
+```
+Found a Kerberos ticket, I will attempt to copy files from fermicloud510.fnal.gov with command:
+scp -o StrictHostKeyChecking=no -o GSSAPIAuthentication=true -o GSSAPIDelegateCredentials=true -o ProxyCommand="ssh -K -W %h:%p {user}@lpchost" user@{schedd}:/home/cmsdataops/macosta/{"CMSSW-mcgen-testjob.sh","ThetaGen.sh","step1_gen.py"} /projects/HEPCloud-FNAL/job_area/cobalt-cms-26264/local_dir/sandbox
+
+CMSSW-mcgen-testjob.sh                                                                                                                          100% 1697   397.4KB/s   00:00
+ThetaGen.sh                                                                                                                                     100%  724   182.9KB/s   00:00
+step1_gen.py                                                                                                                                    100% 9907     2.2MB/s   00:00
+# Sandbox directory located at: /projects/HEPCloud-FNAL/job_area/cobalt-cms-26264/local_dir/sandbox
+```
