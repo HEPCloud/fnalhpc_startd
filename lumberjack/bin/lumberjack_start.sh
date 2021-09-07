@@ -34,7 +34,6 @@ if [[ ${HTC_ROLE} == *"CentralManager"* ]]; then
   SINGULARITY_IMAGE="htcondor_centralmgr_lumberjack.sif"
   test -e $JOB_QUEUE_FILE || (echo "Job queue file does not exist" ; exit 1)
   echo "I am a central manager, writing my info at ${PWD}/90_central_mgr_info"
-  env
   n=`printf %05d $COBALT_PARTNAME`
   MY_NODEID="nid$n"
   cat >${PWD}/90_central_mgr <<EOF
@@ -60,7 +59,7 @@ echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
 #    singularity run --env JOB_QUEUE_FILE=/srv/job_queue.log --env SPOOL_DIR=${SPOOL_DIR} --env LOG_DIR=${LOG_DIR} --bind /etc/hosts --bind /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}:/srv --bind /cvmfs --bind ${SSD_SCRATCH} --home /srv ${SSD_SCRATCH}/${SINGULARITY_IMAGE}
 #    singularity instance start --containall --bind /etc/hosts --bind ${PWD}/${SLOT_PREFIX}/local_dir:/srv --bind ${PWD}/${SLOT_PREFIX}/condor:/etc/condor --hostname ${CONTAINER_NAME} /root/fnalhpc_startd/lumberjack/singularity/${SINGULARITY_IMAGE} ${CONTAINER_NAME}
     echo "singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}"
-    singularity --debug --verbose run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
+    singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
 } || 
 {
     echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"

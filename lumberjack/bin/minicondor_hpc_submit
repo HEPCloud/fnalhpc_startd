@@ -137,6 +137,10 @@ do
     FILE_LIST="${FILE_LIST},"\"$file\"
 #    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
 done
+
+ORIG_X509=$(grep -wR 'x509userproxy' job_queue.log | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
+FILE_LIST="${FILE_LIST},"\"${ORIG_X509}\"
+
 echo -e "${MGT}# Tips:"
 echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will automatically atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
 echo ""
@@ -215,4 +219,4 @@ echo Submitting COBALT job
 # Submit cobalt job
 cd ${THETA_BASE_DIR}; qsub -A ${ALLOCATION} -q ${QUEUE} -t ${TIME} -n ${NODE_CNT} --jobname=${SLOT_PREFIX} --attr ssds=required:enable_ssh=1 job.cobalt
 echo ""
-echo Done!!! check your job and files at ${THETA_BASE_DIR}
+echo Done.. Check your job and files at ${THETA_BASE_DIR}
