@@ -20,14 +20,14 @@ add_values_to () {
 echo "# This file was created by $prog" > /etc/condor/config.d/01-env.conf
 add_values_to 01-env.conf \
     CONDOR_HOST "${CONDOR_SERVICE_HOST:-${CONDOR_HOST:-\$(FULL_HOSTNAME)}}" \
-    NUM_CPUS "${NUM_CPUS:-1}" \
-    MEMORY "${MEMORY:-1024}" \
+    NUM_CPUS "${NUM_CPUS:-60}" \
+    MEMORY "${MEMORY:-186368}" \
     RESERVED_DISK "${RESERVED_DISK:-1024}" \
-    USE_POOL_PASSWORD "${USE_POOL_PASSWORD:-no}"
+    USE_POOL_PASSWORD "${USE_POOL_PASSWORD:-yes}"
 
 
 bash -x "/update-secrets" || fail "Failed to update secrets"
-bash -x "/update-config" || fail "Failed to update config"
+#bash -x "/update-config" || fail "Failed to update config"
 
 
 # Bug workaround: daemons will die if they can't raise the number of FD's;
@@ -60,12 +60,9 @@ SPOOL=$(condor_config_val SPOOL)
 
 if [[ $DAEMON_LIST == *"SCHEDD"* ]]; then
   echo "Looks like I'll be running a Lumberjack Schedd, inspecting my job_queue.log"
-  ls -lthra $SPOOL
-  echo "Fixing permissions on my job_queue.log"
-  chown -R condor:condor $SPOOL/job_queue.log
-  NJOBS=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}' | wc -l)
+  NJOBS=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}' | tr -d \" | wc -l)
   echo "I will be running $NJOBS jobs"
-  IWD=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}'| sort -u)
+  IWD=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}' | tr -d \" | sort -u )
   echo "My Iwd is: ${IWD} and its contents are"
   ls -ltrha ${IWD}
 fi
@@ -73,10 +70,25 @@ fi
 
 sleep 5
 
-condor_q 
+cat /etc/passwd
+id cmsdataops
 echo -------------
-condor_q --better-analyze
+condor_q
 echo -------------
 condor_status -any
+echo -------------
+#echo -n $(condor_config_val -dump) | base64
+condor_config_val -dump
+echo -------------
+condor_status -any -l
 
-exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
+while true  
+do  
+  echo **************
+  condor_q   
+  condor_status
+  echo **************
+  sleep 120
+done
+
+#exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
