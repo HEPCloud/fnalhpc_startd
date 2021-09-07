@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 prog=${0##*/}
 progdir=${0%/*}
 
@@ -58,16 +56,27 @@ done
 
 # Gather my DAEMON_LIST
 DAEMON_LIST=$(condor_config_val DAEMON_LIST)
-#condor_config_val SPOOL
+SPOOL=$(condor_config_val SPOOL)
 
 if [[ $DAEMON_LIST == *"SCHEDD"* ]]; then
-  echo "Looks like I'll be running a SCHEDD, need a job_queue.log file to import"
-#  echo "Job queue at: ${JOB_QUEUE_FILE}"
-#  ls -ltrha ${JOB_QUEUE_FILE}
-#  cp ${JOB_QUEUE_FILE} $(condor_config_val SPOOL)
-#  chown condor:condor $(condor_config_val SPOOL)/job_queue.log
+  echo "Looks like I'll be running a Lumberjack Schedd, inspecting my job_queue.log"
+  ls -lthra $SPOOL
+  echo "Fixing permissions on my job_queue.log"
+  chown -R condor:condor $SPOOL/job_queue.log
+  NJOBS=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}' | wc -l)
+  echo "I will be running $NJOBS jobs"
+  IWD=$(grep -R Iwd $SPOOL/job_queue.log | awk '{print $4}'| sort -u)
+  echo "My Iwd is: ${IWD} and its contents are"
+  ls -ltrha ${IWD}
 fi
-/usr/sbin/condor_master -f
+/usr/sbin/condor_master
 
-/bin/su -c "/usr/local/bin/condor_restd.sh" - restd
-#$(condor_config_val MASTER -f)
+sleep 5
+
+condor_q 
+echo -------------
+condor_q --better-analyze
+echo -------------
+condor_status -any
+
+exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"

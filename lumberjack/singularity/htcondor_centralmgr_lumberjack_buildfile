@@ -3,14 +3,33 @@ From: htcondor/base:el7
 
 %files
     ./start_condor_lumberjack.sh /usr/local/bin/start_condor_lumberjack.sh
+    ./htcondor_9_1_1_lumberjack.tar.gz /opt/htcondor_9_1_1_lumberjack.tar.gz
 
 %post
     groupadd -g 10505 HEPCloud-FNAL
+    groupadd -g 5063 us_cms
+    useradd -g us_cms -G HEPCloud-FNAL -u 42935 cmsdataops
     useradd -g HEPCloud-FNAL -G users -u 35068 macosta
     chown -R macosta: /home/macosta
-#    yum -y install vim git
+    chown -R cmsdataops: /home/cmsdataops
 
     chmod a+x /usr/local/bin/start_condor_lumberjack.sh
+
+    mkdir -p /opt/htcondor_9_1_1_lumberjack
+    tar xfv /opt/htcondor_9_1_1_lumberjack.tar.gz -C /opt/htcondor_9_1_1_lumberjack
+
+    yum -y remove condor*
+    yum clean all  
+
+    cd /opt/htcondor_9_1_1_lumberjack/public
+    yum -y --nogpgcheck localinstall \
+                     condor-externals-9.1.1-0.542947.el7.x86_64.rpm \
+                     condor-9.1.1-0.542947.el7.x86_64.rpm \
+                     condor-procd-9.1.1-0.542947.el7.x86_64.rpm \
+                     condor-classads-9.1.1-0.542947.el7.x86_64.rpm \
+                     python2-condor-9.1.1-0.542947.el7.x86_64.rpm \
+                     python3-condor-9.1.1-0.542947.el7.x86_64.rpm \
+                     condor-externals-9.1.1-0.542947.el7.x86_64.rpm
 
 %environment
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
