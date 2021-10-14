@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# Terminal utils
+BL="\033[1;34m"
+YL="\033[1;33m"
+WHT="\033[1;97m"
+CY="\033[1;36m"
+MGT="\033[1;35m"
+GR="\033[1;32m"
+RD="\033[1;31m"
+NO_COLOR="\033[0m"
+
+JOB_QUEUE=$1
+
+if [ -z "${JOB_QUEUE}" ]
+then
+  echo -e "${RD}# ERROR: A required positional parameter was not recognized"
+  echo -e "${RD}# I need a lumberjack-exported job_queue.log to work properly"
+  echo -e "# For insructions about the experimental export process, go to: https://github.com/HEPCloud/fnalhpc_startd/tree/master/lumberjack"
+exit 1
+fi 
+
+echo ""
+echo "====== Analyzing job_queue.log for directories needed by my jobs"
+echo ""
+
+ORIG_SCHEDD_HOST=$(grep -wR 'GlobalJobId' ${JOB_QUEUE} | awk '{print $4}' | tr -d \" | awk -F# '{print $1}' | sort -u)
+echo -e "${YL}Input job_queue.log indicates my source Schedd host is: ${ORIG_SCHEDD_HOST}${NO_COLOR}"
+WORKDIR_LIST=$(grep -R Iwd ${JOB_QUEUE} | awk '{print $4}' | sort -u | tr -d \")
+echo -e ${WORKDIR_LIST}
+
+exit 0
+
+# This for loop is not needed, we are assuming there's a single, common IWD for all exported jobs
+# But it might come helpful if we figure out how to do this cleanly
+for dir in $WORKDIR_LIST 
+do
+   echo "$dir"
+   ORIG_IWD=${dir}
+   NEWDIR="${PWD}/${SLOT_PREFIX}/sandbox"
+   mkdir -p $SANDBOX_DIR
+#   echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+done
+
+
+echo -e "${MGT}"
+echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo -e "# Lumberjack does not yet support file transfer                          "
+echo -e "# Make sure the following files from the original Schedd are available to"
+echo -e "# this HPC-minicondor job by placing them into:                          "
+echo -e "# $SANDBOX_DIR"
+echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo -e ""
+echo "Original IWD: ${ORIG_IWD}"
+echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+echo ""
+echo -e "${NO_COLOR}Backing up original job_queue.log and editing Iwd for HPC job"
+cp ${JOB_QUEUE} $THETA_BASE_DIR/.job_queue.log_original
+
+# From this point on, use '$THETA_BASE_DIR/.job_queue.log_original' to refer to the location of the ORIGINAL job_queue.log copy
+# Files we will transfer/list: Cmd + TransferInput
+XFERS=$(grep -wR 'TransferInput' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | tr -d \")
+IFS=',' read -ra XFER_LIST <<< "$XFERS"
+
+ORIG_SCHEDD_CMD=$(grep -wR 'Cmd' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | tr -d \")
+ORIG_CMD=$(grep -wR 'Cmd' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
+FILE_LIST="\"${ORIG_CMD}\""
+#  echo -e "scp root@${ORIG_SCHEDD_HOST}:$ORIG_SCHEDD_CMD ${NEWDIR}/${ORIG_CMD}"
+for file in "${XFER_LIST[@]}"
+do
+    NEWLOC="${SANDBOX_DIR}/$file"
+    FILE_LIST="${FILE_LIST},"\"$file\"
+#    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
+done
+
+ORIG_X509=$(grep -wR 'x509userproxy' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
+FILE_LIST="${FILE_LIST},"\"${ORIG_X509}\"
+
+echo -e "${MGT}# Tips:"
+echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will automatically atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
+echo ""
+echo "    > scp root@${ORIG_SCHEDD_HOST}:'${FILE_LIST}' ${SANDBOX_DIR}"
+echo ""
+echo "To push the files from the remote schedd machine, if there is only one-way connectivity, as is the case of FNAL (our machines can not be accessed from offsite). You'll need to login to the Schedd and 'scp' the files over to the login node, which by default has inbound ssh connectivity. The caveat here is that we still need someone (Maria) to do this by hand with an MFA token that lives in her phone. If that is your case, please login to your Schedd machine ${SCHEDD_ORIG_HOST} and run the following instruction:" | fold | awk '{ print "\t" $0 }'
+echo ""
+echo "    > scp ${ORIG_IWD}/{${FILE_LIST}} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
+echo ""
+
+exit 0
+
+# Create UserLog, Out and Err directories"
+OUT=$(grep -wR 'Out' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+ERR=$(grep -wR 'Err' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+LOG=$(grep -wR 'UserLog' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | tr -d \" | sort -u)
+[ -z "$OUT" ] && echo "" || mkdir ${SANDBOX_DIR}/$OUT
+[ -z "$ERR" ] && echo "" || mkdir ${SANDBOX_DIR}/$ERR
+[ -z "$LOG" ] && echo "" || mkdir ${SANDBOX_DIR}/$LOG
+
+## Verify if we have a krb ticket, if so, attempt to SCP the files while we're at it
+kticket=`klist 2> /dev/null | grep FNAL.GOV`
+if [ -n "$kticket" ]; then
+  echo -e "${NO_COLOR}Found a Kerberos ticket, I will attempt to copy files from ${ORIG_SCHEDD_HOST} with command:"
+  echo -e "${GR}scp -o StrictHostKeyChecking=no -o GSSAPIAuthentication=true -o GSSAPIDelegateCredentials=true -o ProxyCommand="\"ssh -K -W %h:%p $(whoami)@cmslpc174.fnal.gov"\" root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/{${FILE_LIST}} ${SANDBOX_DIR} ${NO_COLOR}"
+  echo ""
+  scp -o StrictHostKeyChecking=no -o GSSAPIAuthentication=true -o GSSAPIDelegateCredentials=true -o ProxyCommand="ssh -K -W %h:%p $(whoami)@cmslpc174.fnal.gov" root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/{${FILE_LIST}} ${SANDBOX_DIR}
+else
+    echo -e "${NO_COLOR}No Kerberos ticket found! The following files are expected, please make sure they are present before the HPC job starts"
+    echo -e 'See "Tips:" above'
+    echo -e "- ${SANDBOX_DIR}/${ORIG_CMD}"
+    for file in "${XFER_LIST[@]}"
+    do
+      NEWLOC="${SANDBOX_DIR}/$file"
+      echo -e "- $NEWLOC"
+    done
+fi
+echo -e "# Sandbox directory located at: ${SANDBOX_DIR}"
+echo ""
+
+# A bit of info on this, $SANDBOX_DIR is the local directory where I'm throwing the sandboxes for jobs
+# It is mounted in the container under /srv/sandbox (see lumberjack_start.sh)
+sed -i 's,'"$ORIG_IWD"',/srv/sandbox,g' $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
+echo -e "job_queue.log edited in place at $THETA_BASE_DIR/local_dir/lib/condor/spool"
+echo ""
+

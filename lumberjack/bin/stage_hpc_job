@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# This script stages and creates all files and directories needed by the HPC
+# Most if not all of the following paths live in shared Filesystems and will be later 
+# accessed and operated in by minicondor_hpc.
+
+# NOTE: This is VERY specific to Theta
+
+# Should be configurable but for now it's okay
+cd /home/macosta/fnalhpc_startd/lumberjack/bin
+
+env | grep -i sched 
+env | grep -i minicondor_tmp 
+
+SCHEDD_FILE=${_minicondor_tmp_SCHEDD_FILE}
+
+echo "Local Linux user: $(whoami)"
+LNS=$(qstat -u ${THETA_USER} | wc -l)
+if [ $LNS -gt 2 ]
+then
+  echo "WARN: There are COBALT jobs in the queue"
+  qstat -u ${THETA_USER}
+fi
+
+echo ""
+echo ====== Creating base directory on shared storage
+mkdir ${THETA_BASE_DIR}
+echo Using directory $THETA_BASE_DIR
+
+# Setting up base files for COBALT/THETA
+echo ""
+echo ====== Writing base files
+echo Copy the "skeleton" folder as-is
+cp -dR skeleton/* $THETA_BASE_DIR/
+cp -dR lumberjack_start.sh $THETA_BASE_DIR/lumberjack_start.sh
+echo Put the job_queue.log file in place
+export JOB_QUEUE=$THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
+cp -dR ${SCHEDD_FILE} ${JOB_QUEUE}
+
+echo Generate and make sure permissions are well set for the pool_password
+openssl rand -hex 32 > $THETA_BASE_DIR/secrets/pool_password
+chmod 400 $THETA_BASE_DIR/secrets/pool_password
+echo "Add custom names to our daemons"
+cat >$THETA_BASE_DIR/condor/config.d/97-personal2.conf <<EOF
+# Run-time settings for this personal condor setup
+#new startd name
+MASTER_NAME = master_${GLIDEIN_NAME}
+COLLECTOR_NAME = coll_${GLIDEIN_NAME} 
+SCHEDD_NAME = sched_${GLIDEIN_NAME}
+STARTD_NAME = startd_${GLIDEIN_NAME}
+EOF
+
+# Write theta files
+echo ====== Writing files for job submission
+cat > ${THETA_BASE_DIR}/job.cobalt <<EOF
+#!/bin/bash
+
+# number of nodes
+#COBALT -n ${NODE_CNT}
+# wall time request, this is 30min
+#COBALT -t ${TIME}
+# one of the two debug queues, only difference is KNL cache settings
+#COBALT -q ${QUEUE}
+# project, this should work for the ALCC allocation
+#COBALT -A ${ALLOCATION}
+
+export MY_JOBID=${JOB_ID}
+# MPI launcher, 1 node, 1 MPI rank per node
+# basically starts mycommand on both nodes in the batch job
+EOF
+
+# Next
+# Submitting the "head" job with: Master, Collector, Negotiator, Schedd and Startds (in case I'm running on a single node)
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
+# Submitting "worker" jobs with: Master, Startd
+for ((i=2;i<=${NODE_CNT};i++)); do
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
+    echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
+done
+
+echo "wait" >> ${THETA_BASE_DIR}/job.cobalt
+
+chmod a+rx ${THETA_BASE_DIR}/job.cobalt
+chmod -R 777 $THETA_BASE_DIR/local_dir
+
+echo "COBALT job submit file: "
+cat ${THETA_BASE_DIR}/job.cobalt

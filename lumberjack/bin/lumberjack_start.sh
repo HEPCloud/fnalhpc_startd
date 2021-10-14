@@ -2,6 +2,21 @@
 
 # ------- Cleanup function -------- #
 function cleanup {
+    /usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
+    /usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/cms.cern.ch >& /dev/null
+    /usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/unpacked.cern.ch >& /dev/null
+    /usr/bin/fusermount -u /dev/shm/cvmfsexec/dist/cvmfs/oasis.opensciencegrid.org >& /dev/null
+    rm -rfd /dev/shm/frontier-cache >& /dev/null
+    rm -rfd /dev/shm/cvmfs-cache >& /dev/null
+    rm -rfd /dev/shm/cvmfsexec >& /dev/null
+    /usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/config-osg.opensciencegrid.org >& /dev/null
+    /usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/cms.cern.ch >& /dev/null
+    /usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/unpacked.cern.ch >& /dev/null
+    /usr/bin/fusermount -u /tmp/cvmfsexec/dist/cvmfs/oasis.opensciencegrid.org >& /dev/null
+    rm -rfd /tmp/frontier-cache >& /dev/null
+    rm -rfd /tmp/cvmfs-cache >& /dev/null
+    rm -rfd /tmp/cvmfsexec >& /dev/null
+    rm -rfd /local/scratch/uscms >& /dev/null
     sleep 5
     echo "Called cleanup function"
 }
@@ -45,32 +60,42 @@ EOF
 fi
 
 echo "$timestamp Cleaning up possible leftovers from previous jobs"
+cleanup
 
 echo "$timestamp Deploying and starting local squid"
+mkdir -p /local/scratch/uscms/
+cd /local/scratch/uscms/
+tar xzf /projects/HEPCloud-FNAL/frontier-cache_local_scratch.tgz
+/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh start > /dev/null 2>&1
 
 echo "$timestamp Setting relevant environment variables"
 export CMS_LOCAL_SITE=T3_US_ANL
 
 echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
+mkdir -p /local/scratch/uscms/${SLOT_PREFIX}/cvmfs-cache
+cd /local/scratch/uscms/${SLOT_PREFIX}
+tar xzf /projects/HEPCloud-FNAL/cvmfsexec_local_scratch.tgz
+
 {
     cd ${BASE}
-    CONTAINER_NAME="${SLOT_PREFIX}.${HOSTNAME}"
-    echo "$timestamp Launching CVMFSexec and minicondor inside Singularity"
-#    singularity run --env JOB_QUEUE_FILE=/srv/job_queue.log --env SPOOL_DIR=${SPOOL_DIR} --env LOG_DIR=${LOG_DIR} --bind /etc/hosts --bind /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}:/srv --bind /cvmfs --bind ${SSD_SCRATCH} --home /srv ${SSD_SCRATCH}/${SINGULARITY_IMAGE}
-#    singularity instance start --containall --bind /etc/hosts --bind ${PWD}/${SLOT_PREFIX}/local_dir:/srv --bind ${PWD}/${SLOT_PREFIX}/condor:/etc/condor --hostname ${CONTAINER_NAME} /root/fnalhpc_startd/lumberjack/singularity/${SINGULARITY_IMAGE} ${CONTAINER_NAME}
-    echo "singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}"
-    singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
+    CONTAINER_NAME="${SLOT_PREFIX}.$(hostname)"
+    echo "$timestamp Launching CVMFSexec and minicondor inside Singularity - $CONTAINER_NAME"
+#    singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}
+    /local/scratch/uscms/${SLOT_PREFIX}/cvmfsexec/cvmfsexec config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- $SHELL -c "/cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity run --containall --bind /etc/hosts --bind local_dir:/srv --bind condor:/etc/condor /projects/HEPCloud-FNAL/containers/${SINGULARITY_IMAGE}"
 } || 
 {
     echo "$timestamp Startd or cvmfsexec exited with errors, stopping local squid and cleaning up"
-    #/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
-    #rm -rf ${SSD_SCRATCH}
+    /local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
     cleanup
     exit 1
 }
 
-echo "$timestamp Singularity exited, stopping local squid, copying Schedd job_queue and cleaning up"
-#/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
-#cp ${SPOOL_DIR}/job_queue.log /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}/
-#cp ${LOG_DIR}/* /projects/HEPCloud-FNAL/job_area/${SLOT_PREFIX}/condor_log/
+echo "$timestamp Singularity exited peacefully, stopping local squid, copying Schedd job_queue and cleaning up"
+/local/scratch/uscms/frontier-cache/utils/bin/fn-local-squid.sh stop
+echo "$timestamp Reverting job_queue.log to original Iwd"
+sed -i 's,/srv/sandbox,'"$ORIG_IWD"',g' $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
+cat $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
+tar -czvf ${SLOT_PREFIX}_spool.tar.gz local_dir/lib/condor/spool
+tar -czvf ${SLOT_PREFIX}_sandbox.tar.gz local_dir/sandbox
+echo "$timestamp Done, find entire SPOOL directory at: ${BASE}/${SLOT_PREFIX}_spool.tar.gz and sandbox files at ${BASE}/${SLOT_PREFIX}_sandbox.tar.gz"
 cleanup
