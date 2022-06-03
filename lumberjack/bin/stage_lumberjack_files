@@ -27,54 +27,66 @@ echo ""
 ORIG_SCHEDD_HOST=$(grep -wR 'GlobalJobId' ${JOB_QUEUE} | awk '{print $4}' | tr -d \" | awk -F# '{print $1}' | sort -u)
 echo -e "${YL}Input job_queue.log indicates my source Schedd host is: ${ORIG_SCHEDD_HOST}${NO_COLOR}"
 WORKDIR_LIST=$(grep -R Iwd ${JOB_QUEUE} | awk '{print $4}' | sort -u | tr -d \")
-echo -e ${WORKDIR_LIST}
-
-exit 0
 
 # This for loop is not needed, we are assuming there's a single, common IWD for all exported jobs
 # But it might come helpful if we figure out how to do this cleanly
+CLUSTERS=0
+declare -a SPOOL_DIRS=()
+declare -a XFER_FILE_LIST=()
+declare -a WMAGENT_DIRS=()
+declare -a USER_DIRS=()
+
 for dir in $WORKDIR_LIST 
 do
-   echo "$dir"
-   ORIG_IWD=${dir}
-   NEWDIR="${PWD}/${SLOT_PREFIX}/sandbox"
-   mkdir -p $SANDBOX_DIR
-#   echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+   XFER_FILE_LIST+=("${dir}")
+   if [[ ${dir} == *"/srv/lib/condor/spool/"* ]]; then
+       SPOOL_DIRS+=("${dir}")
+       echo "Found SPOOL dir"  
+       :
+   elif [[ ${dir} == *"/wmagent/"* ]]; then
+       # Assuming that we have one WMAGent dir per cluster
+       echo "Found WMAGent dir"  
+       CLUSTERS=$(($CLUSTERS + 1))
+       WMAGENT_DIRS+=("${dir}")
+   else
+       echo "Found User dir" 
+       ORIG_IWD=${dir}
+       USER_DIRS+=("${dir}")
+   fi
 done
 
+echo "Got ${CLUSTERS} clusters"
 
 echo -e "${MGT}"
 echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo -e "# Lumberjack does not yet support file transfer                          "
 echo -e "# Make sure the following files from the original Schedd are available to"
 echo -e "# this HPC-minicondor job by placing them into:                          "
-echo -e "# $SANDBOX_DIR"
+#echo -e "# $SANDBOX_DIR"
 echo -e "# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-echo -e ""
-echo "Original IWD: ${ORIG_IWD}"
-echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
-echo ""
-echo -e "${NO_COLOR}Backing up original job_queue.log and editing Iwd for HPC job"
-cp ${JOB_QUEUE} $THETA_BASE_DIR/.job_queue.log_original
+echo -e "${NO_COLOR}"
+#echo "Original IWD: ${ORIG_IWD}"
+#echo "HPC-minicondor IWD: ${SANDBOX_DIR}"
+#echo ""
+#echo -e "${NO_COLOR}Backing up original job_queue.log and editing Iwd for HPC job"
+#cp ${JOB_QUEUE} ${JOB_QUEUE}
 
-# From this point on, use '$THETA_BASE_DIR/.job_queue.log_original' to refer to the location of the ORIGINAL job_queue.log copy
+# From this point on, use '${JOB_QUEUE}' to refer to the location of the ORIGINAL job_queue.log copy
 # Files we will transfer/list: Cmd + TransferInput
-XFERS=$(grep -wR 'TransferInput' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | tr -d \")
-IFS=',' read -ra XFER_LIST <<< "$XFERS"
+TRANSFER_INPUT=($(grep -wR 'TransferInput' ${JOB_QUEUE} | awk '{print $4}'))
+XFER_FILE_LIST+=("${TRANSFER_INPUT}")
+echo -e "${GR}Got transfer input list as: ${TRANSFER_INPUT}${NO_COLOR}"
 
-ORIG_SCHEDD_CMD=$(grep -wR 'Cmd' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | tr -d \")
-ORIG_CMD=$(grep -wR 'Cmd' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
-FILE_LIST="\"${ORIG_CMD}\""
-#  echo -e "scp root@${ORIG_SCHEDD_HOST}:$ORIG_SCHEDD_CMD ${NEWDIR}/${ORIG_CMD}"
-for file in "${XFER_LIST[@]}"
-do
-    NEWLOC="${SANDBOX_DIR}/$file"
-    FILE_LIST="${FILE_LIST},"\"$file\"
-#    echo "scp root@${ORIG_SCHEDD_HOST}:${ORIG_IWD}/$file ${NEWLOC}"
-done
+ORIG_SCHEDD_CMD=($(grep -wR 'Cmd' ${JOB_QUEUE} | awk '{print $4}'))
+XFER_FILE_LIST+=("${ORIG_SCHEDD_CMD}")
+echo -e "${BL}Got cmd as: ${ORIG_SCHEDD_CMD}${NO_COLOR}"
 
-ORIG_X509=$(grep -wR 'x509userproxy' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | sort -u | awk -F/ '{print $NF}' | tr -d \")
-FILE_LIST="${FILE_LIST},"\"${ORIG_X509}\"
+ORIG_X509=($(grep -wR 'x509userproxy' ${JOB_QUEUE} | awk '{print $4}'))
+XFER_FILE_LIST+=("${ORIG_X509}")
+echo -e "${RD}Got original x509 as: ${ORIG_X509}${NO_COLOR}"
+
+echo -e "Final export list: $XFER_FILE_LIST"
+exit 0
 
 echo -e "${MGT}# Tips:"
 echo "To pull the files from the local(HPC) login node, first make sure that there is networking connectivity between the login node and the remote schedd via SSH (port 22), files will be copied via 'scp'. If both networking and authentication via ssh are possible from the login node to the remote Schedd, this script will automatically atemmpt to run the following scp command and pull the necessary files:" | fold | awk '{ print "\t" $0 }'
@@ -86,12 +98,11 @@ echo ""
 echo "    > scp ${ORIG_IWD}/{${FILE_LIST}} $(whoami)@theta.alcf.anl.gov:${SANDBOX_DIR}"
 echo ""
 
-exit 0
 
 # Create UserLog, Out and Err directories"
-OUT=$(grep -wR 'Out' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-ERR=$(grep -wR 'Err' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
-LOG=$(grep -wR 'UserLog' $THETA_BASE_DIR/.job_queue.log_original | awk '{print $4}' | tr -d \" | sort -u)
+OUT=$(grep -wR 'Out' ${JOB_QUEUE} | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+ERR=$(grep -wR 'Err' ${JOB_QUEUE} | awk '{print $4}' | awk -F/ '{print $1}' | tr -d \" | sort -u)
+LOG=$(grep -wR 'UserLog' ${JOB_QUEUE} | awk '{print $4}' | tr -d \" | sort -u)
 [ -z "$OUT" ] && echo "" || mkdir ${SANDBOX_DIR}/$OUT
 [ -z "$ERR" ] && echo "" || mkdir ${SANDBOX_DIR}/$ERR
 [ -z "$LOG" ] && echo "" || mkdir ${SANDBOX_DIR}/$LOG
@@ -117,7 +128,7 @@ echo -e "# Sandbox directory located at: ${SANDBOX_DIR}"
 echo ""
 
 # A bit of info on this, $SANDBOX_DIR is the local directory where I'm throwing the sandboxes for jobs
-# It is mounted in the container under /srv/sandbox (see lumberjack_start.sh)
+# It is mounted in the container under /srv/sandbox (see sawmill_payload_start.sh)
 sed -i 's,'"$ORIG_IWD"',/srv/sandbox,g' $THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
 echo -e "job_queue.log edited in place at $THETA_BASE_DIR/local_dir/lib/condor/spool"
 echo ""

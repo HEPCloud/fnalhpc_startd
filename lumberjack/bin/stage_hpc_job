@@ -32,7 +32,7 @@ echo ""
 echo ====== Writing base files
 echo Copy the "skeleton" folder as-is
 cp -dR skeleton/* $THETA_BASE_DIR/
-cp -dR lumberjack_start.sh $THETA_BASE_DIR/lumberjack_start.sh
+cp -dR sawmill_payload_start.sh $THETA_BASE_DIR/sawmill_payload_start.sh
 echo Put the job_queue.log file in place
 export JOB_QUEUE=$THETA_BASE_DIR/local_dir/lib/condor/spool/job_queue.log
 cp -dR ${SCHEDD_FILE} ${JOB_QUEUE}
@@ -71,10 +71,10 @@ EOF
 
 # Next
 # Submitting the "head" job with: Master, Collector, Negotiator, Schedd and Startds (in case I'm running on a single node)
-echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./lumberjack_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
+echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=1 ./sawmill_payload_start.sh -r CentralManager &" >> ${THETA_BASE_DIR}/job.cobalt
 # Submitting "worker" jobs with: Master, Startd
 for ((i=2;i<=${NODE_CNT};i++)); do
-    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./lumberjack_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${SLOT_PREFIX} --env COBALT_NODEID=${i} ./sawmill_payload_start.sh -r Execute &" >> ${THETA_BASE_DIR}/job.cobalt
     echo "sleep 1" >> ${THETA_BASE_DIR}/job.cobalt
 done
 
