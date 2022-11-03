@@ -1,0 +1,9 @@
+#!/bin/bash
+
+USER=`whoami`
+echo theta_monitor "$@">>/tmp/monitor.${USER}.log
+/bin/date >>/tmp/monitor.${USER}.log
+/bin/cat $1/status >>/tmp/monitor.${USER}.log 2>/dev/null
+/bin/cat $1/status 2>/dev/null
+#echo Foo = 3
+exit 0
