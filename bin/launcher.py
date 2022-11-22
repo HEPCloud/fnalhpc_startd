@@ -69,11 +69,14 @@ def doSendOutput(job_name):
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         stdout, stderr = p.communicate()
 
+        log("Adding files to output tarball")
         for job_file in os.listdir(full_execute_dir):
             out_tar.add(name=os.path.join(full_execute_dir, job_file),
                         arcname=job_file)
+            log(f"Added {job_file}")
         out_tar.close()
         shutil.copy2(tmp_output_file, fs_fbase_dir)
+        log(f"Output tarball {tmp_output_file} sent to {fs_fbase_dir}")
     except Exception:
         log(f"Unexpected error: {sys.exc_info()[0]}")
         traceback.print_exc(file=sys.stdout)
@@ -88,15 +91,18 @@ def doStatusCheck():
         log("No jobs, skipping check")
         return True
     try:
+        terminated_jobs = []
         for job_name, starter in job_list.items():
             if starter.poll() is not None:
                 log(f"Job {job_name} terminated")
-                del job_list[job_name]
                 doSendOutput(job_name)
                 doCleanUp(job_name)
+                terminated_jobs.append(job_name)
+        for job_name in terminated_jobs:
+            del job_list[job_name]
     except Exception:
         log("StatusCheck failed")
-        log("Unexpected error: {sys.exc_info()[0]}")
+        log(f"Unexpected error: {sys.exc_info()[0]}")
         traceback.print_exc(file=sys.stdout)
         return False
     log("StatusCheck succeeded")
@@ -107,13 +113,12 @@ def doCleanUp(job_name):
     log(f"Cleaning up {job_name}")
     try:
         if job_name in job_list:
-            proc = job_list[job_name]
             try:
-                os.kill(job_list[job_name], signal.SIGQUIT)
-                (pid, status) = os.waitpid(job_list[job_name], 0)
+                os.kill(job_list[job_name].pid, signal.SIGQUIT)
+                (pid, status) = os.waitpid(job_list[job_name].pid, 0)
                 log(f"Waitpid({job_list[job_name]}) returned {pid}, {status}")
-                del job_list[job_name]
             except (OSError, TypeError) as e:
+                # log(f"WARNING: Error killing job {job_name}: {e}")
                 pass
             # TODO Add better error handling, including SIGKILL of starter after timeout
         job_dir = os.path.join(execute_dir, job_name)

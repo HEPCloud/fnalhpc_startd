@@ -27,9 +27,10 @@ while getopts 'u:a:n:q:t:v:j:s:b:' flag; do
   esac
 done
 
-COMMON_BIN=$(dirname "${BASH_SOURCE[0]}")
-PATH="$COMMON_BIN"/../templates/batch/"${BATCH_SYSTEM}":$PATH
-HCSS_VO_SOURCE="$COMMON_BIN"/../templates/vos/"${VO}"
+HCSS_BIN=$(dirname "${BASH_SOURCE[0]}")
+HCSS_ROOT="${HCSS_BIN}"/..
+PATH="$HCSS_ROOT"/templates/batch/"${BATCH_SYSTEM}":$PATH
+HCSS_VO_SOURCE="$HCSS_ROOT"/templates/vos/"${VO}"
 HCSS_EDGE_BASE_DIR=$PWD
 
 export HCSS_USER HCSS_VO_SOURCE HCSS_SLOT_PREFIX HCSS_JOB_ID HCSS_NODE_CNT HCSS_ACCOUNT HCSS_QUEUE HCSS_REQ_TIME HCSS_SLOT_PREFIX HCSS_SITE
@@ -53,6 +54,8 @@ echo ====== Writing local files
 echo -n > here.info
 echo "${HCSS_SLOT_PREFIX}" >> here.info
 cp -dR "${HCSS_VO_SOURCE}"/skeleton/* .
+cp -dR "${HCSS_VO_SOURCE}"/skeleton/.condor .
+cp -dR "${HCSS_ROOT}"/edge_scripts .
 chmod 400 pool_password
 # This will ultimately go inside Singularity thus, the odd path
 echo LOCAL_DIR="${PWD}" >>condor_config
@@ -64,7 +67,9 @@ MASTER_NAME = $HCSS_GLIDEIN_NAME
 STARTD_NAME = $HCSS_GLIDEIN_NAME
 STARTER_REMOTE_DIR = $HCSS_BASE_DIR/rendezvous
 VO = ${VO}
-VO_LOCAL_DIR = ${HCSS_VO_SOURCE}/edge_files
+HCSS_EDGE_BASE_DIR = ${HCSS_EDGE_BASE_DIR}
+CENTRAL_MANAGER1 = ${HCSS_CENTRAL_MANAGER1}
+CENTRAL_MANAGER2 = ${HCSS_CENTRAL_MANAGER2}
 EOF
 
 # create sshfs connection
@@ -75,8 +80,9 @@ mkdir "${HCSS_BASE_DIR}"
 echo ====== Writing files for job submission
 mkdir "${HCSS_BASE_DIR}"/rendezvous "${HCSS_BASE_DIR}"/log "${HCSS_BASE_DIR}"/execute
 #TODO: cp -a "${HCSS_VO_SOURCE}"/theta_files/* "${HCSS_BASE_DIR}"/
-cp -a "${COMMON_BIN}"/init_start.sh "${HCSS_BASE_DIR}" #TODO: copy everything from bin?
-cp -a "${COMMON_BIN}"/launcher.py "${HCSS_BASE_DIR}"
+cp -a "${HCSS_BIN}"/init_start.sh "${HCSS_BASE_DIR}" #TODO: copy everything from bin?
+cp -a "${HCSS_BIN}"/launcher.py "${HCSS_BASE_DIR}"
+cp -a "${HCSS_VO_SOURCE}/${HCSS_SITE}"/wrapup_chirp "${HCSS_BASE_DIR}"
 create_submit_script.sh > "${HCSS_BASE_DIR}"/job.submit
 chmod a+rx "${HCSS_BASE_DIR}"/job.submit
 
@@ -101,5 +107,6 @@ ${HCSS_SINGULARITY_PATH} instance start \
   --containall \
   --env CONDOR_CONFIG="${HCSS_EDGE_BASE_DIR}"/condor_config \
   --bind /etc/hosts \
+  --bind "${HCSS_BASE_DIR}" \
   --home "${HCSS_EDGE_BASE_DIR}" \
   "${VO_SOURCE}/${HCSS_HTCONDOR_EDGE_IMAGE}" htcondor_"${HCSS_SLOT_PREFIX}"
