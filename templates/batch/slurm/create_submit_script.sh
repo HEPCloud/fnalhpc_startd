@@ -22,5 +22,5 @@ echo "# MPI launcher, 1 node, 1 MPI rank per node"
 echo "# basically starts mycommand on both nodes in the batch job"
 echo
 
-echo ./init_start.sh
+echo ./bin/init_start.sh
 echo "wait"

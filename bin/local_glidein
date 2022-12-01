@@ -1,43 +1,38 @@
 #!/bin/bash
 
-# Terminal utils
 
 # Launch a full stack glidein on a set of nodes
 # Gathering parameters for the request
-HCSS_USER=macosta
 HCSS_NODE_CNT=1
-HCSS_QUEUE=debug-cache-quad
 HCSS_REQ_TIME="60"
 HCSS_JOB_ID=${RANDOM}
-verbose='false'
 
 while getopts 'u:a:n:q:t:v:j:s:b:' flag; do
   case "${flag}" in
     u) HCSS_USER="${OPTARG}" ;;
-    a) HCSS_ACCOUNT="${OPTARG}" ;;
     n) HCSS_NODE_CNT="${OPTARG}" ;;
     q) HCSS_QUEUE="${OPTARG}" ;;
     t) HCSS_REQ_TIME="${OPTARG}" ;;
     j) HCSS_JOB_ID="${OPTARG}" ;;
-    s) HCSS_SITE="${OPTARG}" ;;
-    v) VO="${OPTARG}" ;;
-    b) BATCH_SYSTEM="${OPTARG}" ;;
     *) echo "Usage: $0 -u [<user>] -n [<node cnt>] [<base directory>]" 1>&2 ; exit 1
        ;;
   esac
 done
 
-HCSS_BIN=$(dirname "${BASH_SOURCE[0]}")
+HCSS_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 HCSS_ROOT="${HCSS_BIN}"/..
-PATH="$HCSS_ROOT"/templates/batch/"${BATCH_SYSTEM}":$PATH
-HCSS_VO_SOURCE="$HCSS_ROOT"/templates/vos/"${VO}"
+HCSS_VO_SOURCE="$HCSS_ROOT"/vo
 HCSS_EDGE_BASE_DIR=$PWD
 
-export HCSS_USER HCSS_VO_SOURCE HCSS_SLOT_PREFIX HCSS_JOB_ID HCSS_NODE_CNT HCSS_ACCOUNT HCSS_QUEUE HCSS_REQ_TIME HCSS_SLOT_PREFIX HCSS_SITE
+PATH="${HCSS_BIN}":$PATH
+
+export HCSS_USER HCSS_VO_SOURCE HCSS_SLOT_PREFIX HCSS_JOB_ID HCSS_NODE_CNT HCSS_QUEUE HCSS_REQ_TIME HCSS_SLOT_PREFIX
 
 set -a
-source "${HCSS_VO_SOURCE}/${HCSS_SITE}/account.conf"
+source "${HCSS_VO_SOURCE}/account.conf"
 set +a
+
+export HCSS_JOB_SHARED_DIR="${HCSS_SHARED_DIR}/${HCSS_SLOT_PREFIX}"
 
 echo "====== Starting split starter at ${HOSTNAME} under local Linux user $(whoami)"
 LNS=$(jobs_in_queue.sh)
@@ -47,58 +42,55 @@ then
   jobs_queue.sh
 fi
 
-echo INFO: Using directory "$HCSS_BASE_DIR"
+echo INFO: Using shared directory "$HCSS_JOB_SHARED_DIR"
 
 # Set up local Condor installation
 echo ====== Writing local files
 echo -n > here.info
 echo "${HCSS_SLOT_PREFIX}" >> here.info
-cp -dR "${HCSS_VO_SOURCE}"/skeleton/* .
-cp -dR "${HCSS_VO_SOURCE}"/skeleton/.condor .
-cp -dR "${HCSS_ROOT}"/edge_scripts .
-chmod 400 pool_password
+cp -dr "${HCSS_VO_SOURCE}"/condor/* ./config.d
 # This will ultimately go inside Singularity thus, the odd path
-echo LOCAL_DIR="${PWD}" >>condor_config
-cat >config.d/97-personal2.conf <<EOF
+echo LOCAL_DIR="${PWD}" >> condor_config
+# This config file will define some variables within condor
+cat >config.d/95-hcss.conf <<EOF
 # Run-time settings for this personal condor setup
 #new startd name
 NUM_SLOTS_TYPE_1 = $HCSS_NODE_CNT
 MASTER_NAME = $HCSS_GLIDEIN_NAME
 STARTD_NAME = $HCSS_GLIDEIN_NAME
-STARTER_REMOTE_DIR = $HCSS_BASE_DIR/rendezvous
-VO = ${VO}
+STARTER_REMOTE_DIR = $HCSS_JOB_SHARED_DIR/rendezvous
 HCSS_EDGE_BASE_DIR = ${HCSS_EDGE_BASE_DIR}
-CENTRAL_MANAGER1 = ${HCSS_CENTRAL_MANAGER1}
-CENTRAL_MANAGER2 = ${HCSS_CENTRAL_MANAGER2}
+HCSS_CENTRAL_MANAGER1 = ${HCSS_CENTRAL_MANAGER1}
+HCSS_CENTRAL_MANAGER2 = ${HCSS_CENTRAL_MANAGER2}
+HCSS_SITE_NAME = ${HCSS_SITE_NAME}
+HCSS_START_EXPR = ${HCSS_START_EXPR}
+HCSS_SINGULARITY_IMAGE_EXPR = ${HCSS_SINGULARITY_IMAGE_EXPR}
 EOF
 
 # create sshfs connection
 echo ====== Creating base directory on shared storage
-mkdir "${HCSS_BASE_DIR}"
+mkdir "${HCSS_JOB_SHARED_DIR}"
 
 # write files
 echo ====== Writing files for job submission
-mkdir "${HCSS_BASE_DIR}"/rendezvous "${HCSS_BASE_DIR}"/log "${HCSS_BASE_DIR}"/execute
-#TODO: cp -a "${HCSS_VO_SOURCE}"/theta_files/* "${HCSS_BASE_DIR}"/
-cp -a "${HCSS_BIN}"/init_start.sh "${HCSS_BASE_DIR}" #TODO: copy everything from bin?
-cp -a "${HCSS_BIN}"/launcher.py "${HCSS_BASE_DIR}"
-cp -a "${HCSS_VO_SOURCE}/${HCSS_SITE}"/wrapup_chirp "${HCSS_BASE_DIR}"
-create_submit_script.sh > "${HCSS_BASE_DIR}"/job.submit
-chmod a+rx "${HCSS_BASE_DIR}"/job.submit
+mkdir "${HCSS_JOB_SHARED_DIR}"/rendezvous
+cp -a "${HCSS_BIN}"/launcher.py "${HCSS_JOB_SHARED_DIR}"
+cp -a "${HCSS_VO_SOURCE}"/wrapup_chirp "${HCSS_JOB_SHARED_DIR}"
+create_submit_script.sh > job.submit
+chmod a+rx job.submit
 
 echo INFO: Files written
 
 echo INFO: Submitting job
 
 # Submit job
-cd "${HCSS_BASE_DIR}"
 submit_job.sh
 
 
 cd "${HCSS_EDGE_BASE_DIR}"
 echo ====== No htcondor here so, Singularity ftw
 echo htcondor_"${HCSS_SLOT_PREFIX}" >> here.info
-echo "${HCSS_BASE_DIR}" >> here.info
+echo "${HCSS_JOB_SHARED_DIR}" >> here.info
 
 # TODO: should we bind these?
 # --bind /lus/grand/projects/HighLumin \
@@ -107,6 +99,6 @@ ${HCSS_SINGULARITY_PATH} instance start \
   --containall \
   --env CONDOR_CONFIG="${HCSS_EDGE_BASE_DIR}"/condor_config \
   --bind /etc/hosts \
-  --bind "${HCSS_BASE_DIR}" \
+  --bind "${HCSS_JOB_SHARED_DIR}" \
   --home "${HCSS_EDGE_BASE_DIR}" \
   "${VO_SOURCE}/${HCSS_HTCONDOR_EDGE_IMAGE}" htcondor_"${HCSS_SLOT_PREFIX}"

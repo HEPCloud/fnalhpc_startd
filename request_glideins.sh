@@ -15,6 +15,7 @@
 # limitations under the License.
 
 
+# Terminal utils
 BL="\033[1;34m"
 YL="\033[1;33m"
 WHT="\033[1;97m"
@@ -23,25 +24,20 @@ MGT="\033[1;35m"
 GR="\033[1;32m"
 NO_COLOR="\033[0m"
 
-USER=macosta
 NODE_CNT=1
-QUEUE=debug-cache-quad
-ACCOUNT=cms
 TIME="60"
-VO="cms"
-EDGE_AREA="/lus/grand/projects/HighLumin/edge_area"
-verbose='false'
 
-while getopts 'u:n:q:t:v:e:' flag; do
+while getopts 'u:v:s:b:q:n:t:e:' flag; do
   case "${flag}" in
     u) USER="${OPTARG}" ;;
-    a) ACCOUNT="${OPTARG}" ;;
-    n) NODE_CNT="${OPTARG}" ;;
-    q) QUEUE="${OPTARG}" ;;
-    t) TIME="${OPTARG}" ;;
     v) VO="${OPTARG}" ;;
+    s) SITE="${OPTARG}" ;;
+    b) BATCH_SYSTEM="${OPTARG}" ;;
+    q) QUEUE="${OPTARG}" ;;
+    n) NODE_CNT="${OPTARG}" ;;
+    t) TIME="${OPTARG}" ;;
     e) EDGE_AREA="${OPTARG}" ;;
-    *) echo "Usage: $0 -u [<THETA user>] -n [<node cnt>] [<THETA base directory>]" 1>&2 ; exit 1
+    *) echo "Usage: $0 -u <user> -v <vo> -b <batch system> -q <queue>" 1>&2 ; exit 1
        ;;
   esac
 done
@@ -49,23 +45,23 @@ done
 echo -e "${GR}====== New glidein request ======${NO_COLOR}"
 export REPO_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export EDGE_AREA
-# Launch a full stack glidein on a set of THETA nodes
+# Launch a full stack glidein on a set of nodes
 # Gathering parameters for the request
 
 JOB_ID=${RANDOM}
-DIRNAME="cobalt-${VO}-${JOB_ID}_local"
+DIRNAME="${BATCH_SYSTEM}-${VO}-${JOB_ID}_local"
 EDGE_DIR="${EDGE_AREA}/${DIRNAME}"
 echo -e "${BL}INFO:${NO_COLOR} Creating local sandbox at ${DIRNAME}"
 
-export QSTAT_HEADER="Queue:JobID:JobName:User:Nodes:RunTime:TimeRemaining:State:Project"
-#mkdir -p ${REPO_HOME}/glidein_requests/${DIRNAME}
-mkdir -p ${EDGE_DIR}
-#echo -e "${BL}INFO: ${NO_COLOR}Local directory created at glidein_requests/${DIRNAME} ${YL}"
-echo -e "${BL}INFO: ${NO_COLOR}Local directory created at ${EDGE_DIR} ${YL}"
-#cp -r ${REPO_HOME}/templates/${VO}/* ${REPO_HOME}/glidein_requests/${DIRNAME}/
-cp -r ${REPO_HOME}/templates/${VO}/* ${EDGE_DIR}
-#cd ${REPO_HOME}/glidein_requests/${DIRNAME}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${USER} -t ${TIME} -j ${JOB_ID}
-cd ${EDGE_DIR}/bin ; ./local_glidein -q ${QUEUE} -n ${NODE_CNT} -u ${USER} -a ${ACCOUNT} -t ${TIME} -j ${JOB_ID}
+mkdir -p "${EDGE_DIR}"
+echo -e "${BL}INFO:${NO_COLOR} Local directory created at ${EDGE_DIR} ${YL}"
+cp -r "${REPO_HOME}"/bin "${EDGE_DIR}"
+cp -r "${REPO_HOME}"/templates/skeleton/* "${EDGE_DIR}"
+cp -r "${REPO_HOME}"/templates/skeleton/.condor "${EDGE_DIR}"
+cp -r "${REPO_HOME}"/edge_scripts "${EDGE_DIR}"
+cp -r "${REPO_HOME}"/templates/vos/"${VO}"/"${SITE}" "${EDGE_DIR}"/vo
+cp "${REPO_HOME}"/templates/batch/"${BATCH_SYSTEM}"/* "${EDGE_DIR}"/bin
+cd "${EDGE_DIR}"; ./bin/local_glidein -q "${QUEUE}" -n "${NODE_CNT}" -u "${USER}" -t "${TIME}" -j ${JOB_ID}
 
 echo -e "${GR}Done!, displaying job info ${NO_COLOR}"
-cat ${EDGE_DIR}/bin/here.info
+cat "${EDGE_DIR}"/here.info

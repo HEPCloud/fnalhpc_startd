@@ -6,7 +6,19 @@ env
 echo "############################################################"
 echo
 
-# ------- Cleanup function -------- #
+
+deep_envsubst() {
+    local text="$1"
+    local old_text=""
+
+    while [[ "$text" != "$old_text" ]]; do
+        old_text="$text"
+        text="$(echo "$text" | envsubst)"
+    done
+
+    echo "$text"
+}
+
 detect_local_cvmfs() {
 	CVMFS_ROOT="/cvmfs"
 	repo_name=oasis.opensciencegrid.org
@@ -29,7 +41,6 @@ run_cvmfsexec() {
 
 run_singularity_container() {
     echo "Running singularity container..."
-    #TODO: --bind /projects/HighLumin ?
     /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec \
         --env CONDOR_CHIRP=/usr/local/bin/condor_chirp \
         --env LOG_DIR="${LOG_DIR}" \
@@ -37,7 +48,6 @@ run_singularity_container() {
         --bind /etc/hosts \
         --bind /cvmfs \
         --bind "${SSD_SCRATCH}" \
-        --bind "${BASE}"/log:/var/log \
         --home "${BASE}" \
         "${SSD_SCRATCH}"/singularity_image.sif ./launcher.py
 }
@@ -67,9 +77,9 @@ timestamp="$(date +%d-%m-%Y_%H-%M-%S) - $(hostname) ($SLURM_NODEID) - "
 # ------- Done -------#
 
 # ------ This is the actual code ------- "
-BASE=${PWD}
+BASE=$(deep_envsubst "${HCSS_JOB_SHARED_DIR}")
 
-echo "$timestamp Running CMS Starter "
+echo "$timestamp Running Starter"
 
 echo "$timestamp Cleaning up possible leftovers from previous jobs"
 cleanup
@@ -88,7 +98,7 @@ echo "Execute some setup script here..."
 
 {
     cd "${BASE}"
-    SSD_SCRATCH=$(echo "${HCSS_SCRATCH_DIR}/${HCSS_SLOT_PREFIX}" | envsubst)
+    SSD_SCRATCH=$(deep_envsubst "${HCSS_SCRATCH_DIR}/${HCSS_SLOT_PREFIX}")
     mkdir -p "${SSD_SCRATCH}"/log
     mkdir -p "${SSD_SCRATCH}"/execute
     cp "${HCSS_WORKER_IMAGE}" "${SSD_SCRATCH}"/singularity_image.sif

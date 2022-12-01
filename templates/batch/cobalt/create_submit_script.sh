@@ -19,7 +19,7 @@ echo "# basically starts mycommand on both nodes in the batch job"
 echo
 
 for ((i=1;i<=HCSS_NODE_CNT;i++)); do
-    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${HCSS_SLOT_PREFIX} --env COBALT_NODEID=${i} ./cms_init_start.sh &"
+    echo "aprun -n 1 -N 1 -d 1 -j 1 --cc none --env SLOT_PREFIX=${HCSS_SLOT_PREFIX} --env COBALT_NODEID=${i} ./bin/init_start.sh &"
     echo "sleep 1"
     echo
 done
