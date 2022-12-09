@@ -158,7 +158,7 @@ def main():
     log(f"      -- fs_fbase_dir {fs_fbase_dir}")
     log(f"      -- exec_dir {execute_dir}")
     log(f"      -- log_dir {log_dir}")
-    log(f"      -- My node ID = {env('HCSS_NODE_ID')}")
+    log(f"      -- My node ID = {node_id}")
     log(f"      -- My slot ID = {env('HCSS_SLOT_PREFIX')}")
 
     status_write_time = 0
@@ -167,9 +167,8 @@ def main():
 
     job_name_prefix = ""
 
-    if env("HCSS_NODE_ID"):
-        job_name_prefix = "slot%s_" % (env("HCSS_NODE_ID"))
-        log(f"Using job name prefix {job_name_prefix}")
+    job_name_prefix = "slot{node_id}_"
+    log(f"Using job name prefix {job_name_prefix}")
 
     while True:
         log("*** Starting scan ***")
@@ -223,7 +222,7 @@ release_dir = "/usr"
 execute_dir = env('EXEC_DIR', wn_base_dir + "/execute")
 log_dir = env('LOG_DIR', wn_base_dir + "/log")
 
-node_id = env("HCSS_NODE_ID")
+node_id = eval(env("HCSS_NODE_ID"))
 
 job_list = {}
 

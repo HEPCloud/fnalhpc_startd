@@ -39,6 +39,8 @@ run_cvmfsexec() {
     "$SHELL" -c "$1"
 }
 
+# TODO: Should we bind cvmfs?
+# --bind /cvmfs \
 run_singularity_container() {
     echo "Running singularity container..."
     /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec \
@@ -46,7 +48,6 @@ run_singularity_container() {
         --env LOG_DIR="${LOG_DIR}" \
         --env EXEC_DIR="${EXEC_DIR}" \
         --bind /etc/hosts \
-        --bind /cvmfs \
         --bind "${SSD_SCRATCH}" \
         --home "${BASE}" \
         "${SSD_SCRATCH}"/singularity_image.sif ./launcher.py

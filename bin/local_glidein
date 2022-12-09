@@ -54,18 +54,28 @@ echo LOCAL_DIR="${PWD}" >> condor_config
 # This config file will define some variables within condor
 cat >config.d/95-hcss.conf <<EOF
 # Run-time settings for this personal condor setup
-#new startd name
 NUM_SLOTS_TYPE_1 = $HCSS_NODE_CNT
 MASTER_NAME = $HCSS_GLIDEIN_NAME
 STARTD_NAME = $HCSS_GLIDEIN_NAME
 STARTER_REMOTE_DIR = $HCSS_JOB_SHARED_DIR/rendezvous
-HCSS_EDGE_BASE_DIR = ${HCSS_EDGE_BASE_DIR}
-HCSS_CENTRAL_MANAGER1 = ${HCSS_CENTRAL_MANAGER1}
-HCSS_CENTRAL_MANAGER2 = ${HCSS_CENTRAL_MANAGER2}
-HCSS_SITE_NAME = ${HCSS_SITE_NAME}
-HCSS_START_EXPR = ${HCSS_START_EXPR}
-HCSS_SINGULARITY_IMAGE_EXPR = ${HCSS_SINGULARITY_IMAGE_EXPR}
+
+# Account settings
 EOF
+# Forward environment variables to condor
+condor_vars="
+HCSS_EDGE_BASE_DIR
+HCSS_CENTRAL_MANAGER1
+HCSS_CENTRAL_MANAGER2
+HCSS_SITE_NAME
+HCSS_START_EXPR
+HCSS_SINGULARITY_IMAGE_EXPR
+HCSS_DISK
+HCSS_MEMORY
+HCSS_NUM_CPUS
+"
+for var in $condor_vars; do
+  echo "${var} = ${!var}" >> config.d/95-hcss.conf
+done
 
 # create sshfs connection
 echo ====== Creating base directory on shared storage
