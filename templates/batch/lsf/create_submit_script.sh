@@ -4,12 +4,12 @@
 
 echo "#!/bin/bash"
 
-echo "$ queue used to submit the job"
+echo "# queue used to submit the job"
 echo "#BSUB -q ${HCSS_QUEUE}"
 echo "# project used to submit the job"
 echo "#BSUB -P ${HCSS_ACCOUNT}"
 echo "# wall time requested"
-echo "##BSUB -W 00:10 ${HCSS_REQ_TIME}"
+echo "#BSUB -W ${HCSS_REQ_TIME}"
 echo "# number of nodes"
 echo "#BSUB -nnodes ${HCSS_NODE_CNT}"
 echo "# job name"
