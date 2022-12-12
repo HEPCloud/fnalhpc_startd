@@ -18,6 +18,6 @@ echo "#BSUB -J ${HCSS_SLOT_PREFIX}"
 echo "#BSUB -alloc_flags NVME"
 
 echo "# use all 44 hardware cores (176 logical cores)"
-echo "jsrun -n 1 -a 1 -c 42 -g 0 ${HCSS_SCRATCH_DIR}/test_apptainer.sh &"
+echo "jsrun -n 1 -a 1 -c 42 -g 0 ${HCSS_EDGE_BASE_DIR}/bin/init_start.sh"
 
 echo "wait"
