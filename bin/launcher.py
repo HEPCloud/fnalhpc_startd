@@ -167,7 +167,7 @@ def main():
 
     job_name_prefix = ""
 
-    job_name_prefix = "slot{node_id}_"
+    job_name_prefix = f"slot{node_id}_"
     log(f"Using job name prefix {job_name_prefix}")
 
     while True:
