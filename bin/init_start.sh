@@ -35,7 +35,7 @@ detect_local_cvmfs() {
 
 run_cvmfsexec() {
     echo "Running cvmfsexec..."
-    "${HCSS_SCRATCH_DIR}"/"${HCSS_SLOT_PREFIX}"/cvmfsexec/cvmfsexec config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- \
+    "${HCSS_CVMFSEXEC}" config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- \
     "$SHELL" -c "$1"
 }
 
@@ -43,7 +43,7 @@ run_cvmfsexec() {
 # --bind /cvmfs \
 run_singularity_container() {
     echo "Running singularity container..."
-    /cvmfs/oasis.opensciencegrid.org/mis/singularity/bin/singularity exec \
+    ${HCSS_SINGULARITY_PATH} exec \
         --env CONDOR_CHIRP=/usr/local/bin/condor_chirp \
         --env LOG_DIR="${LOG_DIR}" \
         --env EXEC_DIR="${EXEC_DIR}" \
@@ -85,17 +85,10 @@ echo "$timestamp Running Starter"
 echo "$timestamp Cleaning up possible leftovers from previous jobs"
 cleanup
 
-echo "Execute some setup script here..."
-# echo "$timestamp Deploying and starting local squid"
-# mkdir -p "${HCSS_SCRATCH_DIR}"
-# cd "${HCSS_SCRATCH_DIR}"
-# tar xzf /projects/HighLumin/uscms/frontier-cache_local_scratch.tgz
-# "${HCSS_SCRATCH_DIR}"/frontier-cache/utils/bin/fn-local-squid.sh start > /dev/null 2>&1
-
-# echo "$timestamp Configuring CVMFS, if successful, start HTCondor"
-# mkdir -p "${HCSS_SCRATCH_DIR}"/${HCSS_SLOT_PREFIX}/cvmfs-cache
-# cd "${HCSS_SCRATCH_DIR}"/${HCSS_SLOT_PREFIX}
-# tar xzf /projects/HighLumin/uscms/cvmfsexec_local_scratch.tgz
+if [[ -f ./worker_setup.sh ]]; then
+    echo "Executing worker_setup.sh"
+    source ./worker_setup.sh
+fi
 
 {
     cd "${BASE}"

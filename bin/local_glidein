@@ -86,6 +86,7 @@ echo ====== Writing files for job submission
 mkdir "${HCSS_JOB_SHARED_DIR}"/rendezvous
 cp -a "${HCSS_BIN}"/launcher.py "${HCSS_JOB_SHARED_DIR}"
 cp -a "${HCSS_VO_SOURCE}"/wrapup_chirp "${HCSS_JOB_SHARED_DIR}"
+cp -a "${HCSS_VO_SOURCE}"/setup_worker.sh "${HCSS_JOB_SHARED_DIR}" 2>/dev/null
 create_submit_script.sh > job.submit
 chmod a+rx job.submit
 
