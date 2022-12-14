@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: almalinux:8
+
+%files
+    ./scripts/start_local_condor /usr/local/bin/start_local_condor
+
+%post
+    dnf install -y dnf-plugins-core
+    dnf install -y epel-release
+    dnf config-manager --set-enabled powertools
+    dnf install -y https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm
+    dnf install -y condor
+    chmod a+x /usr/local/bin/start_local_condor
+
+%environment
+    CONDOR_CHIRP=/usr/local/bin/condor_chirp
+    export CONDOR_CHIRP
+
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+
+%startscript
+    /usr/local/bin/start_local_condor
