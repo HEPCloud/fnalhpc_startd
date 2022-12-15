@@ -33,24 +33,18 @@ detect_local_cvmfs() {
 	fi
 }
 
-run_cvmfsexec() {
-    echo "Running cvmfsexec..."
-    "${HCSS_CVMFSEXEC}" config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- \
-    "$SHELL" -c "$1"
-}
-
-# TODO: Should we bind cvmfs?
-# --bind /cvmfs \
 run_singularity_container() {
     echo "Running singularity container..."
-    ${HCSS_SINGULARITY_PATH} exec \
-        --env CONDOR_CHIRP=/usr/local/bin/condor_chirp \
-        --env LOG_DIR="${LOG_DIR}" \
-        --env EXEC_DIR="${EXEC_DIR}" \
-        --bind /etc/hosts \
-        --bind "${SSD_SCRATCH}" \
-        --home "${BASE}" \
-        "${SSD_SCRATCH}"/singularity_image.sif ./launcher.py
+    ARGS="exec --env CONDOR_CHIRP=/usr/local/bin/condor_chirp --env LOG_DIR=${LOG_DIR} --env EXEC_DIR=${EXEC_DIR} --bind /etc/hosts --bind /cvmfs --bind ${SSD_SCRATCH} --home ${BASE} ${SSD_SCRATCH}/singularity_image.sif ./launcher.py"
+    COMMAND=$(
+        if [[ "$1" == "cvmfsexec" ]]; then
+	    echo "${HCSS_CVMFSEXEC} config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ${SHELL} -c '/cvmfs/oasis.opensciencegrid.org/mis/apptainer/testing/bin/apptainer ${ARGS}'"
+        else
+            echo "$1 ${ARGS}"
+        fi
+    )
+    echo "Running command: ${COMMAND}"
+    (eval ${COMMAND})
 }
 export -f run_singularity_container
 
@@ -85,13 +79,14 @@ echo "$timestamp Running Starter"
 echo "$timestamp Cleaning up possible leftovers from previous jobs"
 cleanup
 
-if [[ -f ./worker_setup.sh ]]; then
-    echo "Executing worker_setup.sh"
-    source ./worker_setup.sh
+cd "${BASE}"
+
+if [[ -f ./setup_worker.sh ]]; then
+    echo "Executing setup_worker.sh"
+    source ./setup_worker.sh
 fi
 
 {
-    cd "${BASE}"
     SSD_SCRATCH=$(deep_envsubst "${HCSS_SCRATCH_DIR}/${HCSS_SLOT_PREFIX}")
     mkdir -p "${SSD_SCRATCH}"/log
     mkdir -p "${SSD_SCRATCH}"/execute
@@ -103,9 +98,9 @@ fi
     SINGULARITYENV_PATH=/usr/bin:/usr/local/bin:/sbin
     echo "$timestamp Launching split starter inside Singularity"
     if detect_local_cvmfs; then
-        run_singularity_container
+        run_singularity_container ${HCSS_SINGULARITY_PATH}
     else
-        run_cvmfsexec run_singularity_container
+	run_singularity_container cvmfsexec
     fi
 } || 
 {
