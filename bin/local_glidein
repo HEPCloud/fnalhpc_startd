@@ -103,13 +103,25 @@ echo ====== No htcondor here so, Singularity ftw
 echo htcondor_"${HCSS_SLOT_PREFIX}" >> here.info
 echo "${HCSS_JOB_SHARED_DIR}" >> here.info
 
+run_singularity_container() {
+    echo "Running singularity container..."
+    ARGS="instance start --containall --env CONDOR_CONFIG=${HCSS_EDGE_BASE_DIR}/condor_config --bind /etc/hosts --bind ${HCSS_JOB_SHARED_DIR} --home ${HCSS_EDGE_BASE_DIR} ${VO_SOURCE}/${HCSS_HTCONDOR_EDGE_IMAGE} htcondor_${HCSS_SLOT_PREFIX}"
+    COMMAND=$(
+        if [[ "$1" == "cvmfsexec" ]]; then
+	    echo "${HCSS_CVMFSEXEC} config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ${SHELL} -c '/cvmfs/oasis.opensciencegrid.org/mis/apptainer/testing/bin/apptainer ${ARGS}'"
+        else
+            echo "$1 ${ARGS}"
+        fi
+    )
+    echo "Running command: ${COMMAND}"
+    (eval "${COMMAND}")
+}
+
 # TODO: should we bind these?
 # --bind /lus/grand/projects/HighLumin \
 # --bind /home/"${USER}":/home/"${USER}" \
-${HCSS_SINGULARITY_PATH} instance start \
-  --containall \
-  --env CONDOR_CONFIG="${HCSS_EDGE_BASE_DIR}"/condor_config \
-  --bind /etc/hosts \
-  --bind "${HCSS_JOB_SHARED_DIR}" \
-  --home "${HCSS_EDGE_BASE_DIR}" \
-  "${VO_SOURCE}/${HCSS_HTCONDOR_EDGE_IMAGE}" htcondor_"${HCSS_SLOT_PREFIX}"
+if [[ -f "$HCSS_CVMFSEXEC" ]]; then
+    run_singularity_container "cvmfsexec"
+else
+    run_singularity_container "${HCSS_SINGULARITY_PATH}"
+fi

@@ -44,7 +44,7 @@ run_singularity_container() {
         fi
     )
     echo "Running command: ${COMMAND}"
-    (eval ${COMMAND})
+    (eval "${COMMAND}")
 }
 export -f run_singularity_container
 
