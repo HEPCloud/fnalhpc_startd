@@ -1,11 +1,15 @@
 Bootstrap: docker
-From: htcondor/base:9.0.0-el7
+From: almalinux:8
 
 %files
     ./scripts/start_local_condor /usr/local/bin/start_local_condor
 
 %post
-    yum -y install vim git
+    dnf install -y dnf-plugins-core
+    dnf install -y epel-release
+    dnf config-manager --set-enabled powertools
+    dnf install -y https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm
+    dnf install -y condor
     chmod a+x /usr/local/bin/start_local_condor
 
 %environment

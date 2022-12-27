@@ -1,0 +1,7 @@
+#!/bin/bash
+cd $1 && find . -iname '.chirp.ad*' -exec cat "{}" >> "./.job.ad.out" \;
+echo 'GLIDEIN_CMSSite = "T3_US_ANL"' >> $1/.job.ad.out
+echo 'GLIDEIN_ResourceName = "ANL-Theta"' >> $1/.job.ad.out
+echo 'GLIDEIN_Site = "ANL-Theta"' >> $1/.job.ad.out
+echo 'MachineAttrCMSProcessingSiteName0 = "T3_US_ANL"' >> $1/.job.ad.out
+echo 'MachineAttrCMSSubSiteName0 = "ANL-Theta"' >> $1/.job.ad.out

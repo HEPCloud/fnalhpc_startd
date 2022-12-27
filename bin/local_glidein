@@ -1,0 +1,127 @@
+#!/bin/bash
+
+
+# Launch a full stack glidein on a set of nodes
+# Gathering parameters for the request
+HCSS_NODE_CNT=1
+HCSS_REQ_TIME="60"
+HCSS_JOB_ID=${RANDOM}
+
+while getopts 'u:a:n:q:t:v:j:s:b:' flag; do
+  case "${flag}" in
+    u) HCSS_USER="${OPTARG}" ;;
+    n) HCSS_NODE_CNT="${OPTARG}" ;;
+    q) HCSS_QUEUE="${OPTARG}" ;;
+    t) HCSS_REQ_TIME="${OPTARG}" ;;
+    j) HCSS_JOB_ID="${OPTARG}" ;;
+    *) echo "Usage: $0 -u [<user>] -n [<node cnt>] [<base directory>]" 1>&2 ; exit 1
+       ;;
+  esac
+done
+
+HCSS_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+HCSS_ROOT="${HCSS_BIN}"/..
+HCSS_VO_SOURCE="$HCSS_ROOT"/vo
+HCSS_EDGE_BASE_DIR=$PWD
+
+PATH="${HCSS_BIN}":$PATH
+
+export HCSS_USER HCSS_EDGE_BASE_DIR HCSS_VO_SOURCE HCSS_SLOT_PREFIX HCSS_JOB_ID HCSS_NODE_CNT HCSS_QUEUE HCSS_REQ_TIME HCSS_SLOT_PREFIX
+
+set -a
+source "${HCSS_VO_SOURCE}/account.conf"
+set +a
+
+export HCSS_JOB_SHARED_DIR="${HCSS_SHARED_DIR}/${HCSS_SLOT_PREFIX}"
+
+echo "====== Starting split starter at ${HOSTNAME} under local Linux user $(whoami)"
+LNS=$(jobs_in_queue.sh)
+if [ "$LNS" -gt 2 ]
+then
+  echo "WARN: There are jobs in the queue"
+  jobs_queue.sh
+fi
+
+echo INFO: Using shared directory "$HCSS_JOB_SHARED_DIR"
+
+# Set up local Condor installation
+echo ====== Writing local files
+echo -n > here.info
+echo "${HCSS_SLOT_PREFIX}" >> here.info
+cp -dr "${HCSS_VO_SOURCE}"/condor/* ./config.d
+# This will ultimately go inside Singularity thus, the odd path
+echo LOCAL_DIR="${PWD}" >> condor_config
+# This config file will define some variables within condor
+cat >config.d/95-hcss.conf <<EOF
+# Run-time settings for this personal condor setup
+NUM_SLOTS_TYPE_1 = $HCSS_NODE_CNT
+MASTER_NAME = $HCSS_GLIDEIN_NAME
+STARTD_NAME = $HCSS_GLIDEIN_NAME
+STARTER_REMOTE_DIR = $HCSS_JOB_SHARED_DIR/rendezvous
+
+# Account settings
+EOF
+# Forward environment variables to condor
+condor_vars="
+HCSS_EDGE_BASE_DIR
+HCSS_CENTRAL_MANAGER1
+HCSS_CENTRAL_MANAGER2
+HCSS_SITE_NAME
+HCSS_START_EXPR
+HCSS_SINGULARITY_IMAGE_EXPR
+HCSS_DISK
+HCSS_MEMORY
+HCSS_NUM_CPUS
+"
+for var in $condor_vars; do
+  echo "${var} = ${!var}" >> config.d/95-hcss.conf
+done
+
+# create sshfs connection
+echo ====== Creating base directory on shared storage
+mkdir "${HCSS_JOB_SHARED_DIR}"
+
+# write files
+echo ====== Writing files for job submission
+mkdir "${HCSS_JOB_SHARED_DIR}"/rendezvous
+cp -a "${HCSS_BIN}"/launcher.py "${HCSS_JOB_SHARED_DIR}"
+cp -a "${HCSS_VO_SOURCE}"/wrapup_chirp "${HCSS_JOB_SHARED_DIR}"
+cp -a "${HCSS_VO_SOURCE}"/setup_worker.sh "${HCSS_JOB_SHARED_DIR}" 2>/dev/null
+create_submit_script.sh > job.submit
+chmod a+rx job.submit
+
+echo INFO: Files written
+
+echo INFO: Submitting job
+
+# Submit job
+submit_job.sh
+
+
+cd "${HCSS_EDGE_BASE_DIR}"
+echo ====== No htcondor here so, Singularity ftw
+echo htcondor_"${HCSS_SLOT_PREFIX}" >> here.info
+echo "${HCSS_JOB_SHARED_DIR}" >> here.info
+
+run_singularity_container() {
+    echo "Running singularity container..."
+    ARGS="instance start --containall --env CONDOR_CONFIG=${HCSS_EDGE_BASE_DIR}/condor_config --bind /etc/hosts --bind ${HCSS_JOB_SHARED_DIR} --home ${HCSS_EDGE_BASE_DIR} ${VO_SOURCE}/${HCSS_HTCONDOR_EDGE_IMAGE} htcondor_${HCSS_SLOT_PREFIX}"
+    COMMAND=$(
+        if [[ "$1" == "cvmfsexec" ]]; then
+	    echo "${HCSS_CVMFSEXEC} config-osg.opensciencegrid.org cms.cern.ch unpacked.cern.ch oasis.opensciencegrid.org -- ${SHELL} -c '/cvmfs/oasis.opensciencegrid.org/mis/apptainer/testing/bin/apptainer ${ARGS}'"
+        else
+            echo "$1 ${ARGS}"
+        fi
+    )
+    echo "Running command: ${COMMAND}"
+    (eval "${COMMAND}")
+}
+
+# TODO: should we bind these?
+# --bind /lus/grand/projects/HighLumin \
+# --bind /home/"${USER}":/home/"${USER}" \
+if [[ -f "$HCSS_CVMFSEXEC" ]]; then
+    run_singularity_container "cvmfsexec"
+else
+    run_singularity_container "${HCSS_SINGULARITY_PATH}"
+fi

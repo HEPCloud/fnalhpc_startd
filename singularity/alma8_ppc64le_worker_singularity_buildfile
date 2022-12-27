@@ -1,12 +1,15 @@
 Bootstrap: docker
-From: htcondor/base:9.0.0-el7
+From: cmssw/alma8:ppc64le
 
 %files
     ./scripts/start_local_condor /usr/local/bin/start_local_condor
+    ./scripts/condor_chirp       /usr/local/bin/condor_chirp
 
 %post
-    yum -y install vim git
+    dnf install -y https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm
+    dnf install -y condor
     chmod a+x /usr/local/bin/start_local_condor
+    chmod a+x /usr/local/bin/condor_chirp
 
 %environment
     CONDOR_CHIRP=/usr/local/bin/condor_chirp

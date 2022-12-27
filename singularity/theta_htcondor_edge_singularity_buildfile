@@ -5,7 +5,12 @@ From: htcondor/base:9.0.0-el7
     ./scripts/start_local_condor /usr/local/bin/start_local_condor
 
 %post
+    groupadd -g 10737 HighLumin
+    groupadd -g 10815 Mu2e_HEPCloud
+    useradd -g HighLumin -G users,Mu2e_HEPCloud -u 35068 macosta
+    chown -R macosta: /home/macosta
     yum -y install vim git
+
     chmod a+x /usr/local/bin/start_local_condor
 
 %environment
